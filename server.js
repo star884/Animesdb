@@ -3,17 +3,17 @@ import cors from 'cors';
 import axios from 'axios';
 import path from 'path';
 import { fileURLToPath } from 'url';
-import { ANIME } from '@consumet/extensions';
+// Import Gogoanime directly from the anime subpath
+import { Gogoanime } from '@consumet/extensions';
 
 const app = express();
-// Process environment port injection for Render deployment
 const PORT = process.env.PORT || 3000;
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 
-// Initialize Consumet scraper instance
-const gogoanime = new ANIME.Gogoanime();
+// Instantiate Gogoanime directly
+const gogoanime = new Gogoanime();
 
 app.use(cors());
 app.use(express.json());
@@ -74,29 +74,26 @@ app.get('/api/search', async (req, res) => {
   res.json(data?.Page?.media || []);
 });
 
-// 4. ROUTE: Fetch Episode Video Streams (Scraper + Fallback)
+// 4. ROUTE: Fetch Episode Video Streams
 app.get('/api/stream', async (req, res) => {
   const { title, episode = 1 } = req.query;
 
   if (!title) {
-    return res.status(400).json({ error: 'Title query parameter is required' });
+    return res.status(400).json({ error: 'Title is required' });
   }
 
   try {
-    // Search Gogoanime via Consumet for target title
     const searchResults = await gogoanime.search(title);
 
     if (searchResults.results && searchResults.results.length > 0) {
       const animeId = searchResults.results[0].id;
-      
-      // Fetch full episode metadata list
       const animeInfo = await gogoanime.fetchAnimeInfo(animeId);
+      
       const targetEp = animeInfo.episodes.find(
         (ep) => ep.number === parseInt(episode, 10)
       );
 
       if (targetEp) {
-        // Fetch direct video sources (.m3u8 / .mp4)
         const sources = await gogoanime.fetchEpisodeSources(targetEp.id);
         
         const streams = sources.sources.map((s) => ({
@@ -109,23 +106,18 @@ app.get('/api/stream', async (req, res) => {
       }
     }
 
-    // Default Fallback Streams if search returns empty
+    // Fallback if scraping yields no matches
     const fallbackStreams = [
       {
-        quality: '1080p (Fallback Source)',
+        quality: '1080p (Fallback)',
         url: 'https://commondatastorage.googleapis.com/gtv-videos-bucket/sample/BigBuckBunny.mp4'
-      },
-      {
-        quality: '720p (Backup Source)',
-        url: 'https://commondatastorage.googleapis.com/gtv-videos-bucket/sample/ElephantsDream.mp4'
       }
     ];
 
     res.json({ title, episode: parseInt(episode, 10), streams: fallbackStreams });
   } catch (err) {
-    console.error('Scraper Execution Error:', err.message);
+    console.error('Scraper Error:', err.message);
 
-    // Serve fallback stream if scraping encounters an error or anti-bot block
     res.json({
       title,
       episode: parseInt(episode, 10),
@@ -139,7 +131,7 @@ app.get('/api/stream', async (req, res) => {
   }
 });
 
-// Bind to host 0.0.0.0 for Render edge routing compatibility
+// Bind server to Render's host requirement
 app.listen(PORT, '0.0.0.0', () => {
   console.log(`Server listening on port ${PORT}`);
 });
