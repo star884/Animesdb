@@ -1,0 +1,63 @@
+# Multi-stage build for TRIANIME Anime Streaming Application
+# Stage 1: PHP Application Server
+FROM php:8.2-apache as production
+
+# Set working directory
+WORKDIR /var/www/html
+
+# Install system dependencies
+RUN apt-get update && apt-get install -y --no-install-recommends \
+    git \
+    curl \
+    wget \
+    libssl-dev \
+    libcurl4-openssl-dev \
+    pkg-config \
+    && rm -rf /var/lib/apt/lists/*
+
+# Enable Apache modules
+RUN a2enmod rewrite headers mod_ssl
+
+# Copy PHP configuration
+COPY php.ini /usr/local/etc/php/conf.d/custom.ini
+
+# Copy application files
+COPY Index.php .
+COPY app.js .
+
+# Set appropriate permissions
+RUN chown -R www-data:www-data /var/www/html && \
+    chmod -R 755 /var/www/html
+
+# Configure Apache
+COPY apache-config.conf /etc/apache2/sites-available/000-default.conf
+RUN a2ensite 000-default
+
+# Expose port
+EXPOSE 80 443
+
+# Health check
+HEALTHCHECK --interval=30s --timeout=10s --start-period=5s --retries=3 \
+    CMD curl -f http://localhost/ || exit 1
+
+# Start Apache
+CMD ["apache2-foreground"]
+
+---
+
+# Development stage with additional tools
+FROM production as development
+
+# Install development tools
+RUN apt-get update && apt-get install -y --no-install-recommends \
+    vim \
+    nano \
+    htop \
+    netcat-openbsd \
+    && rm -rf /var/lib/apt/lists/*
+
+# Enable debug logging
+RUN echo "error_reporting = E_ALL" >> /usr/local/etc/php/conf.d/custom.ini && \
+    echo "display_errors = On" >> /usr/local/etc/php/conf.d/custom.ini
+
+CMD ["apache2-foreground"]
