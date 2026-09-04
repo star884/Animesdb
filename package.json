@@ -3,7 +3,8 @@
   "version": "1.0.0",
   "type": "module",
   "scripts": {
-    "start": "node server.js"
+    "start": "node server.js",
+    "test:adapters": "node tests/test-adapters.js"
   },
   "dependencies": {
     "@consumet/extensions": "^1.8.8",
