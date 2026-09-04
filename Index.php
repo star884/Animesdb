@@ -1,9 +1,9 @@
 <?php
 /**
- * TRIANIME - Tenrai Edition
+ * TRIANIME - Single File Anime Streaming Application
  * 
  * @version 2.0.0
- * @description Fully responsive SPA using Tenrai API, Tailwind CSS, and Vanilla JS.
+ * @description Fully responsive SPA using Tenrai.net API, Tailwind CSS, and Vanilla JS.
  */
 ?>
 <!DOCTYPE html>
@@ -97,6 +97,35 @@
             -webkit-box-orient: vertical;
             overflow: hidden;
         }
+
+        /* Skeleton Loading */
+        .skeleton {
+            background: linear-gradient(90deg, #1e1e1e 25%, #2a2a2a 50%, #1e1e1e 75%);
+            background-size: 200% 100%;
+            animation: loading 1.5s infinite;
+        }
+        @keyframes loading {
+            0% { background-position: 200% 0; }
+            100% { background-position: -200% 0; }
+        }
+
+        /* Toast Notifications */
+        .toast {
+            position: fixed;
+            bottom: 20px;
+            right: 20px;
+            padding: 12px 20px;
+            background: rgba(18, 18, 18, 0.95);
+            border: 1px solid rgba(255, 186, 222, 0.3);
+            border-radius: 8px;
+            color: #e0e0e0;
+            z-index: 1000;
+            animation: slideIn 0.3s ease;
+        }
+        @keyframes slideIn {
+            from { transform: translateX(400px); opacity: 0; }
+            to { transform: translateX(0); opacity: 1; }
+        }
     </style>
 </head>
 <body class="bg-dark-bg text-dark-text font-sans antialiased min-h-screen flex flex-col">
@@ -115,483 +144,958 @@
                     <div class="ml-10 flex items-baseline space-x-4">
                         <button onclick="app.router.navigate('home')" class="nav-btn hover:text-accent px-3 py-2 rounded-md text-sm font-medium transition-colors" data-route="home">Home</button>
                         <button onclick="app.router.navigate('browse')" class="nav-btn hover:text-accent px-3 py-2 rounded-md text-sm font-medium transition-colors" data-route="browse">Browse</button>
-                        <button onclick="app.router.navigate('history')" class="nav-btn hover:text-accent px-3 py-2 rounded-md text-sm font-medium transition-colors" data-route="history">History</button>
+                        <button onclick="app.router.navigate('search')" class="nav-btn hover:text-accent px-3 py-2 rounded-md text-sm font-medium transition-colors" data-route="search">Search</button>
                     </div>
                 </div>
 
-                <!-- Search & Mobile Menu -->
-                <div class="flex items-center gap-4">
-                    <!-- Search Bar -->
-                    <div class="hidden md:flex relative">
-                        <input type="text" id="search-input" placeholder="Search anime..." 
-                            class="bg-dark-card border border-dark-border rounded-full py-1.5 px-4 text-sm focus:outline-none focus:border-accent w-48 focus:w-64 transition-all duration-300">
-                        <button onclick="app.search.trigger()" class="absolute right-3 top-1.5 text-dark-text hover:text-accent">
-                            <i class="fas fa-search"></i>
-                        </button>
-                    </div>
-                    
-                    <!-- Mobile Menu Button -->
-                    <div class="md:hidden flex items-center">
-                        <button onclick="document.getElementById('mobile-menu').classList.toggle('hidden')" class="text-dark-text hover:text-accent">
-                            <i class="fas fa-bars"></i>
-                        </button>
-                    </div>
+                <!-- Mobile Menu Button -->
+                <div class="-mr-2 flex md:hidden">
+                    <button onclick="app.ui.toggleMobileMenu()" type="button" class="bg-dark-card inline-flex items-center justify-center p-2 rounded-md text-gray-400 hover:text-white hover:bg-gray-700 focus:outline-none">
+                        <i class="fas fa-bars"></i>
+                    </button>
                 </div>
             </div>
         </div>
-        
+
         <!-- Mobile Menu -->
-        <div id="mobile-menu" class="hidden md:hidden bg-dark-card border-b border-dark-border">
+        <div class="md:hidden hidden bg-dark-card border-t border-dark-border" id="mobile-menu">
             <div class="px-2 pt-2 pb-3 space-y-1 sm:px-3">
-                <button onclick="app.router.navigate('home')" class="block w-full text-left px-3 py-2 rounded-md text-base font-medium hover:bg-dark-bg hover:text-accent">Home</button>
-                <button onclick="app.router.navigate('browse')" class="block w-full text-left px-3 py-2 rounded-md text-base font-medium hover:bg-dark-bg hover:text-accent">Browse</button>
-                <button onclick="app.router.navigate('history')" class="block w-full text-left px-3 py-2 rounded-md text-base font-medium hover:bg-dark-bg hover:text-accent">History</button>
+                <button onclick="app.router.navigate('home')" class="text-gray-300 hover:text-accent block px-3 py-2 rounded-md text-base font-medium w-full text-left">Home</button>
+                <button onclick="app.router.navigate('browse')" class="text-gray-300 hover:text-accent block px-3 py-2 rounded-md text-base font-medium w-full text-left">Browse</button>
+                <button onclick="app.router.navigate('search')" class="text-gray-300 hover:text-accent block px-3 py-2 rounded-md text-base font-medium w-full text-left">Search</button>
             </div>
         </div>
     </nav>
 
-    <!-- Main Content -->
-    <main id="app-container" class="flex-grow pt-20 pb-10 px-4 sm:px-6 lg:px-8 max-w-7xl mx-auto w-full">
-        <!-- Content injected via JS -->
-        <div class="flex justify-center items-center h-64">
+    <!-- Main Content Area -->
+    <main class="flex-grow pt-16 relative">
+        
+        <!-- Loader Overlay -->
+        <div id="global-loader" class="hidden fixed inset-0 z-40 bg-dark-bg/80 flex items-center justify-center">
             <div class="loader"></div>
         </div>
+
+        <!-- View: Home -->
+        <section id="view-home" class="view-section fade-in">
+            <!-- Hero Slider -->
+            <div id="hero-slider" class="relative h-[500px] md:h-[600px] w-full overflow-hidden group">
+                <div id="hero-content" class="absolute inset-0 transition-opacity duration-1000 bg-gradient-to-r from-dark-bg/90 via-dark-bg/50 to-dark-bg/20">
+                    <!-- Content injected via JS -->
+                </div>
+                <div class="absolute bottom-0 left-0 right-0 bg-gradient-to-t from-dark-bg via-dark-bg/80 to-transparent p-8 md:p-16">
+                    <div class="max-w-7xl mx-auto">
+                        <h1 id="hero-title" class="text-4xl md:text-6xl font-bold text-white mb-4 drop-shadow-lg">Loading...</h1>
+                        <p id="hero-synopsis" class="text-gray-300 max-w-2xl mb-6 line-clamp-3 drop-shadow-md"></p>
+                        <div class="flex flex-wrap gap-4">
+                            <button id="hero-watch-btn" class="bg-accent text-black font-bold py-3 px-8 rounded-full hover:bg-white transition-all transform hover:scale-105 shadow-lg shadow-accent/20">
+                                <i class="fas fa-play mr-2"></i> Watch Now
+                            </button>
+                            <button id="hero-details-btn" class="bg-gray-800/80 backdrop-blur text-white font-bold py-3 px-8 rounded-full hover:bg-gray-700 transition-all border border-gray-600">
+                                <i class="fas fa-info-circle mr-2"></i> More Info
+                            </button>
+                        </div>
+                    </div>
+                </div>
+                
+                <!-- Slider Indicators -->
+                <div class="absolute bottom-4 right-8 flex space-x-2 z-10" id="hero-indicators"></div>
+            </div>
+
+            <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-12">
+                <div class="grid grid-cols-1 lg:grid-cols-3 gap-12">
+                    <!-- Main Grid: Top Rated -->
+                    <div class="lg:col-span-2">
+                        <div class="flex justify-between items-center mb-6">
+                            <h2 class="text-2xl font-bold border-l-4 border-accent pl-3">Top Rated Anime</h2>
+                            <button onclick="app.router.navigate('browse', {filter: 'top'})" class="text-sm text-accent hover:text-white transition-colors">View All <i class="fas fa-arrow-right ml-1"></i></button>
+                        </div>
+                        <div id="home-grid" class="grid grid-cols-2 md:grid-cols-3 gap-4">
+                            <!-- Cards injected here -->
+                        </div>
+                    </div>
+
+                    <!-- Sidebar: Recently Updated & Genres -->
+                    <div class="space-y-8">
+                        <!-- Genres -->
+                        <div class="bg-dark-card p-4 rounded-xl border border-dark-border">
+                            <h3 class="font-bold mb-4 text-lg">Popular Genres</h3>
+                            <div id="genre-tags" class="flex flex-wrap gap-2">
+                                <!-- Tags injected here -->
+                            </div>
+                        </div>
+
+                        <!-- Recently Updated -->
+                        <div>
+                            <h2 class="text-2xl font-bold border-l-4 border-accent pl-3 mb-6">Recently Updated</h2>
+                            <div id="upcoming-list" class="space-y-4">
+                                <!-- List items injected here -->
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- View: Browse -->
+        <section id="view-browse" class="view-section hidden fade-in pt-8 pb-12">
+            <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+                <div class="flex flex-col md:flex-row gap-8">
+                    <!-- Filter Sidebar -->
+                    <aside class="w-full md:w-1/4 space-y-6">
+                        <div class="bg-dark-card p-5 rounded-xl border border-dark-border sticky top-24">
+                            <h3 class="font-bold text-lg mb-4">Filters</h3>
+                            
+                            <div class="mb-6">
+                                <label class="block text-sm font-medium text-gray-400 mb-2">Sort By</label>
+                                <select id="browse-sort" onchange="app.browse.updateFilters()" class="w-full bg-dark-bg border border-dark-border rounded-lg p-2 text-sm focus:ring-accent focus:border-accent outline-none">
+                                    <option value="top">Top Rated</option>
+                                    <option value="popular">Most Popular</option>
+                                    <option value="recent">Recently Updated</option>
+                                    <option value="movies">Movies</option>
+                                </select>
+                            </div>
+
+                            <div class="mb-6">
+                                <label class="block text-sm font-medium text-gray-400 mb-2">Genre</label>
+                                <div id="browse-genre-filters" class="space-y-2 max-h-60 overflow-y-auto custom-scrollbar">
+                                    <!-- Checkboxes injected here -->
+                                </div>
+                            </div>
+
+                            <div class="mb-6">
+                                <label class="block text-sm font-medium text-gray-400 mb-2">Type</label>
+                                <select id="browse-type" onchange="app.browse.updateFilters()" class="w-full bg-dark-bg border border-dark-border rounded-lg p-2 text-sm focus:ring-accent focus:border-accent outline-none">
+                                    <option value="">All Types</option>
+                                    <option value="TV">TV</option>
+                                    <option value="Movie">Movie</option>
+                                    <option value="OVA">OVA</option>
+                                    <option value="Special">Special</option>
+                                </select>
+                            </div>
+                            
+                            <button onclick="app.browse.resetFilters()" class="w-full py-2 border border-gray-600 rounded-lg hover:bg-gray-800 text-sm transition-colors">Reset Filters</button>
+                        </div>
+                    </aside>
+
+                    <!-- Grid -->
+                    <div class="w-full md:w-3/4">
+                        <div class="flex justify-between items-center mb-6">
+                            <h2 class="text-2xl font-bold" id="browse-title">Browse Library</h2>
+                            <span class="text-sm text-gray-500" id="browse-count"></span>
+                        </div>
+                        
+                        <div id="browse-grid" class="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-5">
+                            <!-- Grid content -->
+                        </div>
+
+                        <!-- Pagination -->
+                        <div class="mt-12 flex justify-center space-x-4" id="pagination">
+                            <button onclick="app.browse.changePage(-1)" id="btn-prev" class="px-6 py-2 border border-gray-700 rounded-lg hover:bg-gray-800 disabled:opacity-50 transition-colors">Prev</button>
+                            <span id="page-info" class="px-4 py-2 text-sm text-gray-400">Page 1</span>
+                            <button onclick="app.browse.changePage(1)" id="btn-next" class="px-6 py-2 border border-gray-700 rounded-lg hover:bg-gray-800 disabled:opacity-50 transition-colors">Next</button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- View: Watch -->
+        <section id="view-watch" class="view-section hidden fade-in pt-8">
+            <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+                <div class="grid grid-cols-1 lg:grid-cols-3 gap-8">
+                    <!-- Player & Details -->
+                    <div class="lg:col-span-2">
+                        <!-- Video Player -->
+                        <div class="relative w-full bg-black rounded-xl overflow-hidden shadow-2xl shadow-black/50 aspect-video mb-6 group">
+                            <div id="video-container" class="w-full h-full flex items-center justify-center">
+                                <div class="loader"></div>
+                            </div>
+                        </div>
+
+                        <!-- Anime Info -->
+                        <div class="bg-dark-card p-6 rounded-xl border border-dark-border mb-6">
+                            <div class="flex justify-between items-start mb-4">
+                                <div>
+                                    <h1 id="watch-title" class="text-3xl font-bold text-white mb-2">Anime Title</h1>
+                                    <div class="flex items-center space-x-4 text-sm text-gray-400">
+                                        <span class="text-accent"><i class="fas fa-star mr-1"></i> <span id="watch-score">0.0</span></span>
+                                        <span><i class="fas fa-tv mr-1"></i> <span id="watch-type">Unknown</span></span>
+                                        <span><i class="fas fa-calendar mr-1"></i> <span id="watch-year">2024</span></span>
+                                        <span><i class="fas fa-play-circle mr-1"></i> <span id="watch-episodes">0</span> eps</span>
+                                    </div>
+                                </div>
+                                <button id="fav-btn" class="text-gray-400 hover:text-accent transition-colors text-2xl" onclick="app.watch.toggleFavorite()">
+                                    <i class="far fa-heart"></i>
+                                </button>
+                            </div>
+                            <p id="watch-synopsis" class="text-gray-300 leading-relaxed mb-4"></p>
+                            <div class="mb-4">
+                                <p class="text-xs text-gray-500 mb-2">Genres:</p>
+                                <div class="flex flex-wrap gap-2" id="watch-genres"></div>
+                            </div>
+                            <div>
+                                <p class="text-xs text-gray-500 mb-2">Alternative Titles:</p>
+                                <p id="watch-alt-titles" class="text-sm text-gray-300"></p>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Episodes Sidebar -->
+                    <div class="lg:col-span-1">
+                        <div class="bg-dark-card rounded-xl border border-dark-border h-[600px] flex flex-col sticky top-24">
+                            <div class="p-4 border-b border-dark-border">
+                                <h3 class="font-bold text-lg">Episodes</h3>
+                                <div class="mt-2 flex gap-2">
+                                    <span id="ep-count" class="text-xs bg-gray-800 px-2 py-1 rounded text-gray-400">0 eps</span>
+                                </div>
+                            </div>
+                            <div id="episode-list" class="flex-1 overflow-y-auto p-2 space-y-1 custom-scrollbar">
+                                <!-- Episode items -->
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- View: Search -->
+        <section id="view-search" class="view-section hidden fade-in pt-8">
+            <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+                <div class="flex justify-center mb-8">
+                    <div class="relative w-full max-w-2xl">
+                        <input type="text" id="search-input" placeholder="Search anime, characters, studios..." 
+                            class="w-full bg-dark-card border border-dark-border rounded-full py-3 px-6 pl-12 focus:ring-2 focus:ring-accent focus:border-transparent outline-none transition-all shadow-lg">
+                        <i class="fas fa-search absolute left-4 top-3.5 text-gray-500"></i>
+                    </div>
+                </div>
+                
+                <div id="search-results" class="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-6">
+                    <!-- Results -->
+                </div>
+                <div id="search-loading" class="hidden text-center py-20">
+                    <div class="loader mx-auto mb-2"></div>
+                    <p class="text-gray-500">Searching...</p>
+                </div>
+                <div id="search-empty" class="hidden text-center py-20">
+                    <i class="fas fa-ghost text-4xl text-gray-700 mb-4"></i>
+                    <p class="text-gray-500">No anime found.</p>
+                </div>
+            </div>
+        </section>
+
     </main>
 
-    <!-- JavaScript Application Logic -->
+    <!-- Footer -->
+    <footer class="bg-dark-card border-t border-dark-border py-8 mt-auto">
+        <div class="max-w-7xl mx-auto px-4 text-center">
+            <p class="text-gray-500 text-sm">&copy; 2024 TRIANIME. Data provided by Tenrai.net API.</p>
+            <p class="text-gray-600 text-xs mt-2">A fan-made streaming application for educational purposes</p>
+            <div class="flex justify-center space-x-4 mt-4">
+                <a href="#" class="text-gray-600 hover:text-accent transition-colors"><i class="fab fa-discord"></i></a>
+                <a href="#" class="text-gray-600 hover:text-accent transition-colors"><i class="fab fa-twitter"></i></a>
+                <a href="#" class="text-gray-600 hover:text-accent transition-colors"><i class="fab fa-github"></i></a>
+            </div>
+        </div>
+    </footer>
+
+    <!-- Application Logic -->
     <script>
         /**
-         * API Configuration
-         * Using the public Tenrai API endpoint (mguo.me)
+         * Configuration & Constants
          */
-        const API_BASE = 'https://api.mguo.me';
+        const CONFIG = {
+            apiBase: 'https://api.tenrai.net',
+            delayBetweenRequests: 300,
+            cacheExpiry: 3600000, // 1 hour in ms
+        };
 
-        const api = {
-            async fetch(endpoint, params = {}) {
-                const url = new URL(`${API_BASE}${endpoint}`);
-                Object.keys(params).forEach(key => url.searchParams.append(key, params[key]));
-                
-                try {
-                    const res = await fetch(url.toString());
-                    if (!res.ok) throw new Error(`API Error: ${res.status}`);
-                    return await res.json();
-                } catch (error) {
-                    console.error("API Fetch Failed:", error);
+        const GENRES = [
+            "Action", "Adventure", "Comedy", "Drama", "Fantasy", "Horror", "Mecha", 
+            "Music", "Mystery", "Psychological", "Romance", "Sci-Fi", "Slice of Life", 
+            "Sports", "Supernatural", "Thriller", "Isekai", "Josei", "Shonen", "Shojo"
+        ];
+
+        /**
+         * Cache Management
+         */
+        const cache = {
+            store: new Map(),
+            
+            set(key, value, ttl = CONFIG.cacheExpiry) {
+                this.store.set(key, {
+                    value,
+                    expiry: Date.now() + ttl
+                });
+            },
+            
+            get(key) {
+                const item = this.store.get(key);
+                if (!item) return null;
+                if (Date.now() > item.expiry) {
+                    this.store.delete(key);
                     return null;
+                }
+                return item.value;
+            },
+            
+            clear() {
+                this.store.clear();
+            }
+        };
+
+        /**
+         * State Management
+         */
+        const state = {
+            currentRoute: 'home',
+            heroData: [],
+            heroIndex: 0,
+            favorites: JSON.parse(localStorage.getItem('trianime_favorites') || '[]'),
+            browse: {
+                page: 1,
+                maxPage: 10,
+                filters: {
+                    type: 'top',
+                    genres: [],
+                    animeType: ''
+                }
+            },
+            watch: {
+                animeId: null,
+                anime: null,
+                episodes: [],
+                currentEpisodeIndex: 0,
+                currentServer: 'vide'
+            },
+            search: {
+                timeout: null,
+                query: ''
+            },
+            timer: null
+        };
+
+        /**
+         * LocalStorage Management
+         */
+        const storage = {
+            saveFavorites() {
+                localStorage.setItem('trianime_favorites', JSON.stringify(state.favorites));
+            },
+            
+            isFavorite(id) {
+                return state.favorites.includes(id);
+            },
+            
+            addFavorite(id) {
+                if (!this.isFavorite(id)) {
+                    state.favorites.push(id);
+                    this.saveFavorites();
+                }
+            },
+            
+            removeFavorite(id) {
+                state.favorites = state.favorites.filter(fav => fav !== id);
+                this.saveFavorites();
+            }
+        };
+
+        /**
+         * Notification System
+         */
+        const notify = {
+            show(message, type = 'info', duration = 3000) {
+                const toast = document.createElement('div');
+                toast.className = `toast bg-dark-card border`;
+                
+                if (type === 'success') toast.classList.add('border-green-500', 'text-green-300');
+                else if (type === 'error') toast.classList.add('border-red-500', 'text-red-300');
+                else toast.classList.add('border-accent/30', 'text-gray-300');
+                
+                toast.innerHTML = `
+                    <div class="flex items-center space-x-3">
+                        ${type === 'success' ? '<i class="fas fa-check-circle"></i>' : type === 'error' ? '<i class="fas fa-exclamation-circle"></i>' : '<i class="fas fa-info-circle"></i>'}
+                        <span>${message}</span>
+                    </div>
+                `;
+                
+                document.body.appendChild(toast);
+                setTimeout(() => {
+                    toast.style.opacity = '0';
+                    setTimeout(() => toast.remove(), 300);
+                }, duration);
+            }
+        };
+
+        /**
+         * API Handler with Rate Limiting & Caching
+         */
+        const api = {
+            async request(endpoint, params = {}) {
+                const cacheKey = `${endpoint}:${JSON.stringify(params)}`;
+                const cached = cache.get(cacheKey);
+                if (cached) return cached;
+
+                try {
+                    const url = new URL(`${CONFIG.apiBase}${endpoint}`);
+                    Object.keys(params).forEach(key => {
+                        if (params[key]) url.searchParams.append(key, params[key]);
+                    });
+                    
+                    const res = await fetch(url.toString(), {
+                        headers: {
+                            'Accept': 'application/json',
+                        }
+                    });
+                    
+                    if (!res.ok) throw new Error(`API Error: ${res.status}`);
+                    const data = await res.json();
+                    cache.set(cacheKey, data);
+                    return data;
+                } catch (err) {
+                    console.error('API Request Failed:', err);
+                    throw err;
                 }
             },
 
-            async search(query, page = 1, size = 12) {
-                // Tenrai search endpoint
-                return await api.fetch('/search', { 
-                    query, 
-                    page, 
-                    perPage: size,
-                    type: 'all' 
+            async sequentialFetch(requests) {
+                const results = [];
+                for (let i = 0; i < requests.length; i++) {
+                    if (i > 0) {
+                        await new Promise(r => setTimeout(r, CONFIG.delayBetweenRequests));
+                    }
+                    try {
+                        results.push(await requests[i]());
+                    } catch (err) {
+                        console.error(`Request ${i} failed`, err);
+                        results.push(null);
+                    }
+                }
+                return results;
+            },
+
+            async getTrending() {
+                return this.request('/anime/trending');
+            },
+            
+            async getTopRated() {
+                return this.request('/anime/top-rated', { page: 1, perPage: 25 });
+            },
+
+            async getRecentlyUpdated() {
+                return this.request('/anime/recent', { page: 1, perPage: 10 });
+            },
+
+            async search(query, page = 1) {
+                return this.request('/anime/search', { query, page, perPage: 25 });
+            },
+
+            async getAnimeInfo(id) {
+                return this.request(`/anime/${id}`);
+            },
+
+            async getAnimeEpisodes(id, page = 1) {
+                return this.request(`/anime/${id}/episodes`, { page });
+            },
+
+            async getEpisodeStream(animeId, episodeId) {
+                return this.request(`/anime/${animeId}/episode/${episodeId}/stream`);
+            }
+        };
+
+        /**
+         * UI Manager
+         */
+        const ui = {
+            toggleMobileMenu() {
+                const menu = document.getElementById('mobile-menu');
+                menu.classList.toggle('hidden');
+            },
+
+            showLoader(show) {
+                const loader = document.getElementById('global-loader');
+                if (show) loader.classList.remove('hidden');
+                else loader.classList.add('hidden');
+            },
+
+            getAnimeImageUrl(imgUrl) {
+                if(!imgUrl) return 'https://via.placeholder.com/300x450?text=No+Image';
+                if(imgUrl.startsWith('http')) return imgUrl;
+                return `${CONFIG.apiBase}${imgUrl}`;
+            },
+
+            createAnimeCard(anime) {
+                const imgSrc = this.getAnimeImageUrl(anime.image || anime.poster);
+                const isFav = storage.isFavorite(anime.id);
+                return `
+                    <div class="group relative bg-dark-card rounded-lg overflow-hidden shadow-lg hover:shadow-accent/20 transition-all duration-300 hover:-translate-y-1 cursor-pointer">
+                        <div class="aspect-[2/3] overflow-hidden">
+                            <img src="${imgSrc}" alt="${anime.title?.english || anime.title?.romaji || anime.title || 'Anime'}" class="w-full h-full object-cover transform group-hover:scale-110 transition-transform duration-500" loading="lazy">
+                            <div class="absolute inset-0 bg-gradient-to-t from-black/80 via-transparent to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300 flex items-end p-3">
+                                <span class="text-xs font-bold bg-accent text-black px-2 py-1 rounded-full">${anime.type || 'TV'}</span>
+                            </div>
+                        </div>
+                        <div class="p-3">
+                            <h3 class="text-sm font-semibold text-gray-100 truncate group-hover:text-accent transition-colors cursor-pointer" onclick="event.stopPropagation(); app.router.navigate('watch', {id: '${anime.id}'})">${anime.title?.english || anime.title?.romaji || anime.title || 'Unknown'}</h3>
+                            <div class="flex justify-between items-center mt-2">
+                                <span class="text-xs text-gray-500">${anime.year || anime.releaseDate ? new Date(anime.releaseDate || anime.year).getFullYear() : 'N/A'}</span>
+                                <div class="flex space-x-2">
+                                    <span class="text-xs text-accent"><i class="fas fa-star mr-1"></i>${anime.rating ? (anime.rating / 10).toFixed(1) : '?'}</span>
+                                    <button onclick="event.stopPropagation(); app.ui.toggleFavoriteCard('${anime.id}', this)" class="text-gray-400 hover:text-accent transition-colors">
+                                        <i class="fas fa-heart" ${isFav ? "style='color: #ffbade'" : ''}></i>
+                                    </button>
+                                </div>
+                            </div>
+                        </div>
+                        <div onclick="app.router.navigate('watch', {id: '${anime.id}'})" class="absolute inset-0 cursor-pointer"></div>
+                    </div>
+                `;
+            },
+
+            toggleFavoriteCard(id, element) {
+                if (storage.isFavorite(id)) {
+                    storage.removeFavorite(id);
+                    element.querySelector('i').style.color = '';
+                    notify.show('Removed from favorites', 'info');
+                } else {
+                    storage.addFavorite(id);
+                    element.querySelector('i').style.color = '#ffbade';
+                    notify.show('Added to favorites', 'success');
+                }
+            },
+
+            createEpisodeItem(ep, index) {
+                return `
+                    <div onclick="app.watch.selectEpisode(${index})" class="episode-item cursor-pointer p-3 rounded-lg hover:bg-gray-800 flex justify-between items-center group transition-colors border border-transparent hover:border-gray-700" data-index="${index}" data-ep-id="${ep.id}">
+                        <div class="flex items-center flex-1">
+                            <span class="text-xs font-mono text-gray-500 w-12 flex-shrink-0">EP ${ep.number}</span>
+                            <span class="text-sm text-gray-300 truncate ml-2">${ep.title || `Episode ${ep.number}`}</span>
+                        </div>
+                        <i class="fas fa-play text-xs text-gray-600 group-hover:text-accent flex-shrink-0"></i>
+                    </div>
+                `;
+            }
+        };
+
+        /**
+         * Router
+         */
+        const router = {
+            navigate(view, params = {}) {
+                state.currentRoute = view;
+                app.ui.toggleMobileMenu();
+                
+                // Hide all views
+                document.querySelectorAll('.view-section').forEach(el => el.classList.add('hidden'));
+                
+                // Show target view
+                const target = document.getElementById(`view-${view}`);
+                if(target) {
+                    target.classList.remove('hidden');
+                    window.scrollTo(0, 0);
+                }
+
+                // Update Nav State
+                document.querySelectorAll('.nav-btn').forEach(btn => {
+                    btn.classList.remove('text-accent');
+                    if(btn.dataset.route === view) btn.classList.add('text-accent');
+                });
+
+                // Trigger view logic
+                switch(view) {
+                    case 'home': app.home.init(); break;
+                    case 'browse': app.browse.init(params); break;
+                    case 'watch': app.watch.init(params); break;
+                    case 'search': 
+                        if(params.query) {
+                            document.getElementById('search-input').value = params.query;
+                            app.search.performSearch(params.query);
+                        }
+                        break;
+                }
+            }
+        };
+
+        /**
+         * Feature: Home
+         */
+        const home = {
+            async init() {
+                app.ui.showLoader(true);
+                
+                const [trendingRes, topRes, recentRes] = await api.sequentialFetch([
+                    () => api.getTrending(),
+                    () => api.getTopRated(),
+                    () => api.getRecentlyUpdated()
+                ]);
+
+                app.ui.showLoader(false);
+
+                // Handle Hero Slider
+                const heroData = trendingRes?.data || trendingRes?.results || [];
+                state.heroData = heroData.slice(0, 10);
+                state.heroIndex = 0;
+                home.renderHero();
+                home.startSlider();
+
+                // Render Top Rated Grid
+                const grid = document.getElementById('home-grid');
+                const topAnime = topRes?.data || topRes?.results || [];
+                if (topAnime.length) {
+                    grid.innerHTML = topAnime.slice(0, 12).map(a => ui.createAnimeCard(a)).join('');
+                } else {
+                    grid.innerHTML = '<p class="col-span-3 text-center text-gray-500">Failed to load anime.</p>';
+                }
+
+                // Render Recently Updated
+                const upcomingList = document.getElementById('upcoming-list');
+                const recent = recentRes?.data || recentRes?.results || [];
+                if (recent.length) {
+                    upcomingList.innerHTML = recent.slice(0, 5).map(a => `
+                        <div class="flex items-center space-x-3 cursor-pointer hover:bg-gray-800 p-2 rounded transition-colors" onclick="app.router.navigate('watch', {id: '${a.id}'})">
+                            <img src="${ui.getAnimeImageUrl(a.image || a.poster)}" class="w-12 h-16 object-cover rounded" loading="lazy">
+                            <div>
+                                <h4 class="text-sm font-semibold text-gray-200 line-clamp-1">${a.title?.english || a.title?.romaji || a.title}</h4>
+                                <span class="text-xs text-gray-500">${a.type || 'TV'}</span>
+                            </div>
+                        </div>
+                    `).join('');
+                }
+
+                // Render Genres
+                const genreContainer = document.getElementById('genre-tags');
+                genreContainer.innerHTML = GENRES.map(g => `
+                    <button onclick="app.router.navigate('browse', {genre: '${g}'})" class="text-xs bg-dark-bg border border-gray-700 hover:border-accent hover:text-accent px-3 py-1 rounded-full transition-colors">${g}</button>
+                `).join('');
+            },
+
+            renderHero() {
+                if (!state.heroData.length) return;
+                const anime = state.heroData[state.heroIndex];
+                
+                document.getElementById('hero-title').innerText = anime.title?.english || anime.title?.romaji || anime.title || 'Unknown';
+                document.getElementById('hero-synopsis').innerText = anime.description || anime.synopsis || 'No synopsis available.';
+                document.getElementById('hero-watch-btn').onclick = () => app.router.navigate('watch', {id: anime.id});
+                document.getElementById('hero-details-btn').onclick = () => app.router.navigate('watch', {id: anime.id});
+                
+                const container = document.getElementById('hero-content');
+                const bgImage = ui.getAnimeImageUrl(anime.image || anime.poster || anime.cover);
+                container.style.backgroundImage = `linear-gradient(to right, rgba(10,10,10,0.9) 0%, rgba(10,10,10,0.4) 50%, rgba(10,10,10,0.1) 100%), url(${bgImage})`;
+                container.style.backgroundSize = 'cover';
+                container.style.backgroundPosition = 'center';
+                
+                const indicators = document.getElementById('hero-indicators');
+                indicators.innerHTML = state.heroData.map((_, i) => `
+                    <button onclick="app.home.setHero(${i})" class="w-2 h-2 rounded-full transition-colors ${i === state.heroIndex ? 'bg-accent' : 'bg-gray-600'} hover:bg-accent"></button>
+                `).join('');
+            },
+
+            setHero(index) {
+                state.heroIndex = index;
+                home.renderHero();
+                home.resetTimer();
+            },
+
+            startSlider() {
+                home.resetTimer();
+            },
+
+            resetTimer() {
+                if (state.timer) clearInterval(state.timer);
+                state.timer = setInterval(() => {
+                    state.heroIndex = (state.heroIndex + 1) % state.heroData.length;
+                    home.renderHero();
+                }, 6000);
+            }
+        };
+
+        /**
+         * Feature: Browse
+         */
+        const browse = {
+            async init(params = {}) {
+                const genreContainer = document.getElementById('browse-genre-filters');
+                
+                if(params.genre) {
+                    if(!state.browse.filters.genres.includes(params.genre)) {
+                        state.browse.filters.genres.push(params.genre);
+                    }
+                }
+
+                genreContainer.innerHTML = GENRES.map(g => `
+                    <label class="flex items-center space-x-2 cursor-pointer hover:text-accent transition-colors">
+                        <input type="checkbox" value="${g}" 
+                            ${state.browse.filters.genres.includes(g) ? 'checked' : ''} 
+                            onchange="app.browse.toggleGenre('${g}')"
+                            class="form-checkbox h-4 w-4 text-accent rounded border-gray-600 bg-dark-bg focus:ring-offset-dark-bg">
+                        <span class="text-sm">${g}</span>
+                    </label>
+                `).join('');
+
+                await this.fetchContent();
+            },
+
+            toggleGenre(genre) {
+                if(state.browse.filters.genres.includes(genre)) {
+                    state.browse.filters.genres = state.browse.filters.genres.filter(g => g !== genre);
+                } else {
+                    state.browse.filters.genres.push(genre);
+                }
+                state.browse.page = 1;
+                this.fetchContent();
+            },
+
+            updateFilters() {
+                state.browse.filters.type = document.getElementById('browse-sort').value;
+                state.browse.filters.animeType = document.getElementById('browse-type').value;
+                state.browse.page = 1;
+                this.fetchContent();
+            },
+
+            resetFilters() {
+                state.browse.filters = { type: 'top', genres: [], animeType: '' };
+                state.browse.page = 1;
+                document.getElementById('browse-sort').value = 'top';
+                document.getElementById('browse-type').value = '';
+                this.init();
+            },
+
+            changePage(offset) {
+                state.browse.page += offset;
+                if (state.browse.page < 1) state.browse.page = 1;
+                this.fetchContent();
+            },
+
+            async fetchContent() {
+                app.ui.showLoader(true);
+                
+                let data = null;
+                const type = state.browse.filters.type;
+                const genres = state.browse.filters.genres;
+                const animeType = state.browse.filters.animeType;
+
+                try {
+                    const params = { page: state.browse.page, perPage: 20 };
+                    if (animeType) params.type = animeType;
+                    if (genres.length > 0) params.genres = genres.join(',');
+
+                    if (type === 'movies') {
+                        params.type = 'Movie';
+                        data = await api.request('/anime/search', params);
+                    } else if (type === 'popular') {
+                        data = await api.request('/anime/popular', params);
+                    } else if (type === 'recent') {
+                        data = await api.request('/anime/recent', params);
+                    } else {
+                        data = await api.request('/anime/top-rated', params);
+                    }
+                } catch (e) {
+                    console.error(e);
+                    notify.show('Failed to load anime', 'error');
+                    data = { data: [] };
+                }
+
+                app.ui.showLoader(false);
+                
+                const grid = document.getElementById('browse-grid');
+                const count = document.getElementById('browse-count');
+                const pageInfo = document.getElementById('page-info');
+                const items = data?.data || data?.results || [];
+
+                count.innerText = `${items.length} results`;
+                pageInfo.innerText = `Page ${state.browse.page}`;
+                
+                grid.innerHTML = items.length 
+                    ? items.map(a => ui.createAnimeCard(a)).join('') 
+                    : '<div class="col-span-4 text-center text-gray-500 py-10">No anime found matching criteria.</div>';
+
+                document.getElementById('btn-prev').disabled = state.browse.page <= 1;
+                document.getElementById('btn-next').disabled = items.length < 20;
+            }
+        };
+
+        /**
+         * Feature: Watch
+         */
+        const watch = {
+            async init(params) {
+                if(!params.id) return;
+                
+                app.ui.showLoader(true);
+                state.watch.animeId = params.id;
+                
+                try {
+                    const [data, episodesRes] = await Promise.all([
+                        api.getAnimeInfo(params.id),
+                        api.getAnimeEpisodes(params.id)
+                    ]);
+                    
+                    state.watch.anime = data;
+                    this.renderPage(data, episodesRes);
+                } catch (e) {
+                    console.error(e);
+                    notify.show('Error loading anime', 'error');
+                    document.getElementById('watch-title').innerText = "Error loading anime";
+                }
+                app.ui.showLoader(false);
+            },
+
+            renderPage(data, episodesRes) {
+                const anime = data.data || data;
+                
+                document.getElementById('watch-title').innerText = anime.title?.english || anime.title?.romaji || anime.title;
+                document.getElementById('watch-synopsis').innerText = anime.description || anime.synopsis || "No description available.";
+                document.getElementById('watch-score').innerText = anime.rating ? (anime.rating/10).toFixed(1) : 'N/A';
+                document.getElementById('watch-type').innerText = anime.type || 'Unknown';
+                document.getElementById('watch-year').innerText = anime.year || (anime.releaseDate ? new Date(anime.releaseDate).getFullYear() : 'N/A');
+                document.getElementById('watch-episodes').innerText = anime.totalEpisodes || anime.episodes?.length || '0';
+                
+                document.getElementById('watch-alt-titles').innerText = (anime.title?.alternatives || []).join(' | ') || 'N/A';
+                
+                const genres = anime.genres || [];
+                document.getElementById('watch-genres').innerHTML = genres.map(g => 
+                    `<span class="text-xs bg-gray-800 px-2 py-1 rounded text-gray-300">${g}</span>`
+                ).join('');
+
+                // Update favorite button
+                const favBtn = document.getElementById('fav-btn');
+                if (storage.isFavorite(anime.id)) {
+                    favBtn.querySelector('i').className = 'fas fa-heart';
+                    favBtn.querySelector('i').style.color = '#ffbade';
+                } else {
+                    favBtn.querySelector('i').className = 'far fa-heart';
+                    favBtn.querySelector('i').style.color = '';
+                }
+
+                // Episodes
+                const epList = document.getElementById('episode-list');
+                state.watch.episodes = episodesRes?.data || episodesRes?.results || anime.episodes || [];
+                document.getElementById('ep-count').innerText = `${state.watch.episodes.length} Episodes`;
+                
+                epList.innerHTML = state.watch.episodes.map((ep, idx) => ui.createEpisodeItem(ep, idx)).join('');
+
+                if(state.watch.episodes.length > 0) {
+                    this.selectEpisode(0);
+                }
+            },
+
+            async selectEpisode(index) {
+                document.querySelectorAll('.episode-item').forEach(el => {
+                    el.classList.remove('bg-gray-800', 'border-accent');
+                });
+                
+                const selectedEl = document.querySelector(`.episode-item[data-index="${index}"]`);
+                if (selectedEl) {
+                    selectedEl.classList.add('bg-gray-800', 'border-accent');
+                }
+                
+                state.watch.currentEpisodeIndex = index;
+                const ep = state.watch.episodes[index];
+                
+                try {
+                    const container = document.getElementById('video-container');
+                    container.innerHTML = '<div class="loader"></div>';
+                    
+                    const streamRes = await api.getEpisodeStream(state.watch.animeId, ep.id);
+                    const stream = streamRes.data || streamRes;
+                    
+                    if (stream && stream.url) {
+                        container.innerHTML = `<iframe class="w-full h-full" src="${stream.url}" frameborder="0" allowfullscreen></iframe>`;
+                    } else if (stream && stream.sources && stream.sources[0]) {
+                        const videoSource = stream.sources.find(s => s.quality === 'auto' || s.quality === '1080p' || s.quality === '720p') || stream.sources[0];
+                        container.innerHTML = `<iframe class="w-full h-full" src="${videoSource.url}" frameborder="0" allowfullscreen></iframe>`;
+                    } else {
+                        container.innerHTML = '<div class="flex items-center justify-center h-full"><p class="text-gray-500">Stream not available</p></div>';
+                    }
+                } catch(e) {
+                    console.error("Failed to load episode", e);
+                    notify.show('Failed to load episode stream', 'error');
+                    const container = document.getElementById('video-container');
+                    container.innerHTML = '<div class="flex items-center justify-center h-full"><p class="text-gray-500">Error loading stream</p></div>';
+                }
+            },
+
+            toggleFavorite() {
+                const animeId = state.watch.animeId;
+                if (storage.isFavorite(animeId)) {
+                    storage.removeFavorite(animeId);
+                    notify.show('Removed from favorites', 'info');
+                    document.querySelector('#fav-btn i').className = 'far fa-heart';
+                    document.querySelector('#fav-btn i').style.color = '';
+                } else {
+                    storage.addFavorite(animeId);
+                    notify.show('Added to favorites', 'success');
+                    document.querySelector('#fav-btn i').className = 'fas fa-heart';
+                    document.querySelector('#fav-btn i').style.color = '#ffbade';
+                }
+            }
+        };
+
+        /**
+         * Feature: Search
+         */
+        const search = {
+            init() {
+                const input = document.getElementById('search-input');
+                input.addEventListener('input', (e) => {
+                    clearTimeout(state.search.timeout);
+                    const query = e.target.value.trim();
+                    if(query.length > 2) {
+                        state.search.timeout = setTimeout(() => this.performSearch(query), 500);
+                    } else if (query.length === 0) {
+                        document.getElementById('search-results').innerHTML = '';
+                        document.getElementById('search-empty').classList.add('hidden');
+                        document.getElementById('search-loading').classList.add('hidden');
+                    }
                 });
             },
 
-            async getAnimeDetails(id) {
-                // Tenrai returns details via search with ID or specific endpoint
-                // We use search with limit 1 and specific ID if available, or just search the ID
-                return await api.fetch('/search', { query: id, type: 'id' });
-            },
-            
-            // Helper to get watch page data
-            async getWatchPage(id, episodeId) {
-                // Tenrai provides video URLs directly in search/details, 
-                // but we can also use the embed URL for the player
-                return {
-                    id,
-                    episodeId,
-                    // Standard vidsrc embedding using Tenrai data structure
-                    embedUrl: `https://vidsrc.cc/embed/anime?id=${episodeId}&server=vidstream` 
-                };
+            async performSearch(query) {
+                if(!query) return;
+                state.search.query = query;
+                
+                document.getElementById('search-loading').classList.remove('hidden');
+                document.getElementById('search-results').innerHTML = '';
+                document.getElementById('search-empty').classList.add('hidden');
+
+                try {
+                    const data = await api.search(query);
+                    document.getElementById('search-loading').classList.add('hidden');
+                    
+                    const results = data?.data || data?.results || [];
+                    if(results.length > 0) {
+                        document.getElementById('search-results').innerHTML = results.map(a => ui.createAnimeCard(a)).join('');
+                    } else {
+                        document.getElementById('search-empty').classList.remove('hidden');
+                    }
+                } catch (e) {
+                    console.error(e);
+                    document.getElementById('search-loading').classList.add('hidden');
+                    notify.show('Search failed', 'error');
+                }
             }
         };
 
+        /**
+         * Initialization
+         */
         const app = {
-            state: {
-                currentView: 'home',
-                searchResults: [],
-                watchHistory: JSON.parse(localStorage.getItem('trianime_history') || '[]'),
-                currentAnime: null
-            },
-
             init() {
-                this.router.init();
-                this.search.init();
-                this.render.home();
-            },
-
-            router: {
-                init() {
-                    window.addEventListener('hashchange', () => this.handleRoute());
-                    this.handleRoute();
-                },
-
-                navigate(route) {
-                    window.location.hash = route;
-                },
-
-                handleRoute() {
-                    const hash = window.location.hash.replace('#', '') || 'home';
-                    document.querySelectorAll('.nav-btn').forEach(btn => {
-                        btn.classList.remove('text-accent');
-                        if(btn.dataset.route === hash) btn.classList.add('text-accent');
-                    });
-                    app.render[hash]();
-                }
-            },
-
-            search: {
-                init() {
-                    const input = document.getElementById('search-input');
-                    input.addEventListener('keypress', (e) => {
-                        if (e.key === 'Enter') this.trigger();
-                    });
-                },
-
-                async trigger() {
-                    const input = document.getElementById('search-input');
-                    const query = input.value.trim();
-                    if (!query) return;
-                    
-                    app.router.navigate('browse');
-                    await app.render.searchResults(query);
-                }
-            },
-
-            storage: {
-                addToHistory(anime) {
-                    const item = {
-                        id: anime.id,
-                        title: anime.title?.english || anime.title?.romaji || 'Unknown',
-                        image: anime.cover,
-                        episodes: anime.episodes || 0
-                    };
-                    
-                    // Remove if exists to update timestamp
-                    app.state.watchHistory = app.state.watchHistory.filter(a => a.id !== item.id);
-                    app.state.watchHistory.unshift(item);
-                    
-                    // Limit history
-                    if(app.state.watchHistory.length > 50) app.state.watchHistory.pop();
-                    
-                    localStorage.setItem('trianime_history', JSON.stringify(app.state.watchHistory));
-                }
-            },
-
-            render: {
-                home() {
-                    const container = document.getElementById('app-container');
-                    container.innerHTML = `
-                        <div class="space-y-8 fade-in">
-                            <!-- Trending Section -->
-                            <div>
-                                <h2 class="text-2xl font-bold mb-4 flex items-center gap-2">
-                                    <i class="fas fa-fire text-accent"></i> Trending Now
-                                </h2>
-                                <div id="trending-grid" class="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-4">
-                                    <!-- Loading State -->
-                                    <div class="animate-pulse bg-dark-card h-64 rounded-lg"></div>
-                                    <div class="animate-pulse bg-dark-card h-64 rounded-lg"></div>
-                                    <div class="animate-pulse bg-dark-card h-64 rounded-lg"></div>
-                                    <div class="animate-pulse bg-dark-card h-64 rounded-lg"></div>
-                                    <div class="animate-pulse bg-dark-card h-64 rounded-lg"></div>
-                                </div>
-                            </div>
-                        </div>
-                    `;
-                    this.loadTrending();
-                },
-
-                async loadTrending() {
-                    const grid = document.getElementById('trending-grid');
-                    const data = await api.search('', 1, 20); // Empty query often returns trending/all on Tenrai
-                    // Fallback to specific popular query if empty query fails or returns nothing
-                    let results = data?.results || [];
-                    if(results.length === 0) results = (await api.search('popular', 1, 20))?.results || [];
-
-                    grid.innerHTML = results.map(anime => `
-                        <div class="group relative bg-dark-card rounded-lg overflow-hidden hover:shadow-lg hover:shadow-accent/20 transition-all cursor-pointer"
-                             onclick="app.render.animeDetail('${anime.id}')">
-                            <div class="aspect-[2/3] overflow-hidden">
-                                <img src="${anime.cover}" alt="${anime.title?.english}" 
-                                     class="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
-                                     loading="lazy">
-                                <div class="absolute inset-0 bg-gradient-to-t from-dark-bg/90 to-transparent opacity-0 group-hover:opacity-100 transition-opacity flex items-end p-3">
-                                    <span class="text-xs font-bold text-accent">
-                                        <i class="fas fa-play-circle mr-1"></i> Watch Now
-                                    </span>
-                                </div>
-                                <div class="absolute top-2 right-2 bg-dark-bg/80 px-2 py-1 rounded text-xs font-bold text-accent">
-                                    ${anime.status || 'N/A'}
-                                </div>
-                            </div>
-                            <div class="p-3">
-                                <h3 class="text-sm font-medium line-clamp-2 group-hover:text-accent transition-colors">${anime.title?.english || anime.title?.romaji}</h3>
-                                <p class="text-xs text-gray-500 mt-1">${anime.type} • ${anime.releaseDate || ''}</p>
-                            </div>
-                        </div>
-                    `).join('');
-                },
-
-                browse() {
-                    const container = document.getElementById('app-container');
-                    container.innerHTML = `
-                        <div class="space-y-6 fade-in">
-                            <h2 class="text-2xl font-bold">Browse All Anime</h2>
-                            <div id="browse-grid" class="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-4">
-                                <div class="animate-pulse bg-dark-card h-64 rounded-lg"></div>
-                                <div class="animate-pulse bg-dark-card h-64 rounded-lg"></div>
-                                <div class="animate-pulse bg-dark-card h-64 rounded-lg"></div>
-                            </div>
-                            <div id="load-more-container" class="flex justify-center mt-8 hidden">
-                                <button id="load-more-btn" class="bg-dark-card hover:bg-dark-border text-white px-6 py-2 rounded-full transition-colors">
-                                    Load More
-                                </button>
-                            </div>
-                        </div>
-                    `;
-                    this.loadBrowse();
-                },
-
-                async loadBrowse(page = 1) {
-                    const grid = document.getElementById('browse-grid');
-                    const loadMoreBtn = document.getElementById('load-more-btn');
-                    const loadMoreContainer = document.getElementById('load-more-container');
-                    
-                    // If not first page, clear grid
-                    if(page > 1) grid.innerHTML = '';
-
-                    const data = await api.search('', page, 20);
-                    const results = data?.results || [];
-                    
-                    // Hide load more if no results
-                    if(results.length === 0) {
-                        loadMoreContainer.classList.add('hidden');
-                        return;
-                    }
-                    
-                    loadMoreContainer.classList.remove('hidden');
-
-                    grid.insertAdjacentHTML('beforeend', results.map(anime => `
-                        <div class="group relative bg-dark-card rounded-lg overflow-hidden hover:shadow-lg hover:shadow-accent/20 transition-all cursor-pointer"
-                             onclick="app.render.animeDetail('${anime.id}')">
-                            <div class="aspect-[2/3] overflow-hidden">
-                                <img src="${anime.cover}" alt="${anime.title?.english}" 
-                                     class="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
-                                     loading="lazy">
-                                <div class="absolute top-2 right-2 bg-dark-bg/80 px-2 py-1 rounded text-xs font-bold text-accent">
-                                    ${anime.status || 'N/A'}
-                                </div>
-                            </div>
-                            <div class="p-3">
-                                <h3 class="text-sm font-medium line-clamp-2 group-hover:text-accent transition-colors">${anime.title?.english || anime.title?.romaji}</h3>
-                                <p class="text-xs text-gray-500 mt-1">${anime.type} • ${anime.releaseDate || ''}</p>
-                            </div>
-                        </div>
-                    `).join(''));
-
-                    // Setup load more
-                    if(loadMoreBtn) {
-                        loadMoreBtn.onclick = () => this.loadBrowse(page + 1);
-                    }
-                },
-
-                async searchResults(query) {
-                    const container = document.getElementById('app-container');
-                    container.innerHTML = `
-                        <div class="space-y-6 fade-in">
-                            <h2 class="text-2xl font-bold">Search: "${query}"</h2>
-                            <div id="search-grid" class="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-4">
-                                <div class="animate-pulse bg-dark-card h-64 rounded-lg"></div>
-                                <div class="animate-pulse bg-dark-card h-64 rounded-lg"></div>
-                            </div>
-                        </div>
-                    `;
-                    
-                    const data = await api.search(query, 1, 20);
-                    const results = data?.results || [];
-                    const grid = document.getElementById('search-grid');
-
-                    if(results.length === 0) {
-                        grid.innerHTML = `<div class="col-span-full text-center py-10 text-gray-500">No results found for "${query}"</div>`;
-                        return;
-                    }
-
-                    grid.innerHTML = results.map(anime => `
-                        <div class="group relative bg-dark-card rounded-lg overflow-hidden hover:shadow-lg hover:shadow-accent/20 transition-all cursor-pointer"
-                             onclick="app.render.animeDetail('${anime.id}')">
-                            <div class="aspect-[2/3] overflow-hidden">
-                                <img src="${anime.cover}" alt="${anime.title?.english}" 
-                                     class="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
-                                     loading="lazy">
-                                <div class="absolute top-2 right-2 bg-dark-bg/80 px-2 py-1 rounded text-xs font-bold text-accent">
-                                    ${anime.status || 'N/A'}
-                                </div>
-                            </div>
-                            <div class="p-3">
-                                <h3 class="text-sm font-medium line-clamp-2 group-hover:text-accent transition-colors">${anime.title?.english || anime.title?.romaji}</h3>
-                                <p class="text-xs text-gray-500 mt-1">${anime.type} • ${anime.releaseDate || ''}</p>
-                            </div>
-                        </div>
-                    `).join('');
-                },
-
-                async animeDetail(id) {
-                    const container = document.getElementById('app-container');
-                    
-                    // Show loading state
-                    container.innerHTML = `
-                        <div class="animate-pulse space-y-4">
-                            <div class="h-64 bg-dark-card rounded-lg w-full"></div>
-                            <div class="h-8 bg-dark-card rounded w-1/2"></div>
-                            <div class="h-32 bg-dark-card rounded w-full"></div>
-                        </div>
-                    `;
-
-                    const data = await api.search(id, 1, 1); // Fetch specific item
-                    const anime = data?.results[0];
-                    
-                    if(!anime) {
-                        container.innerHTML = `<div class="text-center py-20">Anime not found.</div>`;
-                        return;
-                    }
-
-                    app.storage.addToHistory(anime);
-                    app.state.currentAnime = anime;
-
-                    // Prepare episodes list
-                    const episodes = [];
-                    // Tenrai search results might contain episodes directly or just info. 
-                    // We assume the main result is the anime info.
-                    // If the API returns episodes inside the search result, use them.
-                    // Otherwise we assume we need to fetch watch page to get episodes or infer from ID.
-                    // For this implementation, we'll assume the API returns 'episodes' array or we use a standard range if missing.
-                    
-                    // Note: Tenrai /search often returns the anime info. 
-                    // We will generate episode buttons 1 to N if not provided, or use provided list.
-                    const totalEpisodes = anime.episodes || 12; 
-                    
-                    // Create episode list if not present in search result
-                    const episodeList = anime.episodes || Array.from({length: Math.min(totalEpisodes, 50)}, (_, i) => i + 1);
-
-                    container.innerHTML = `
-                        <div class="fade-in pb-10">
-                            <!-- Header -->
-                            <div class="flex flex-col md:flex-row gap-6 mb-8">
-                                <img src="${anime.cover}" alt="${anime.title?.english}" class="w-full md:w-64 rounded-lg shadow-lg shadow-black/50">
-                                <div class="flex-1">
-                                    <h1 class="text-3xl md:text-4xl font-bold mb-2">${anime.title?.english || anime.title?.romaji}</h1>
-                                    <div class="flex flex-wrap gap-2 mb-4">
-                                        <span class="bg-dark-card px-3 py-1 rounded-full text-xs border border-dark-border">${anime.type}</span>
-                                        <span class="bg-dark-card px-3 py-1 rounded-full text-xs border border-dark-border">${anime.status}</span>
-                                        ${anime.genres?.map(g => `<span class="text-accent text-xs">${g}</span>`).join('')}
-                                    </div>
-                                    <p class="text-gray-400 text-sm leading-relaxed mb-4">${anime.description || 'No description available.'}</p>
-                                    
-                                    <div class="flex gap-3">
-                                        <button onclick="app.render.watchEpisode('${anime.id}', 1)" class="bg-accent hover:bg-accent/80 text-black font-bold py-2 px-6 rounded-full transition-colors flex items-center gap-2">
-                                            <i class="fas fa-play"></i> Watch Now
-                                        </button>
-                                        <button onclick="window.history.back()" class="bg-dark-card hover:bg-dark-border border border-dark-border text-white py-2 px-6 rounded-full transition-colors">
-                                            <i class="fas fa-arrow-left"></i> Back
-                                        </button>
-                                    </div>
-                                </div>
-                            </div>
-
-                            <!-- Episodes -->
-                            <h3 class="text-xl font-bold mb-4">Episodes</h3>
-                            <div class="grid grid-cols-4 sm:grid-cols-6 md:grid-cols-10 gap-2 mb-10">
-                                ${episodeList.map(ep => `
-                                    <button onclick="app.render.watchEpisode('${anime.id}', ${ep})" 
-                                            class="bg-dark-card hover:bg-dark-border border border-dark-border hover:border-accent text-center py-3 rounded transition-colors">
-                                        <span class="text-sm font-medium">${ep}</span>
-                                    </button>
-                                `).join('')}
-                            </div>
-                        </div>
-                    `;
-                },
-
-                async watchEpisode(animeId, episode) {
-                    const container = document.getElementById('app-container');
-                    
-                    // Find anime details again to get title
-                    const data = await api.search(animeId, 1, 1);
-                    const anime = data?.results[0];
-                    const title = anime?.title?.english || anime?.title?.romaji || 'Anime';
-
-                    container.innerHTML = `
-                        <div class="fade-in">
-                            <button onclick="window.location.hash='anime-${animeId}'" class="text-accent hover:underline mb-4 inline-block">
-                                <i class="fas fa-arrow-left"></i> Back to ${title}
-                            </button>
-                            
-                            <div class="relative w-full aspect-video bg-black rounded-lg overflow-hidden shadow-2xl shadow-black/50 mb-4">
-                                <iframe src="https://vidsrc.cc/embed/anime?id=${animeId}&ep=${episode}" 
-                                        frameborder="0" 
-                                        allowfullscreen
-                                        class="w-full h-full"
-                                        title="Video Player"></iframe>
-                            </div>
-                            
-                            <div class="flex justify-between items-center">
-                                <h2 class="text-2xl font-bold">${title} - Episode ${episode}</h2>
-                                <div class="flex gap-2">
-                                    <button onclick="app.render.watchEpisode('${animeId}', ${episode - 1})" 
-                                        ${episode === 1 ? 'disabled' : ''}
-                                        class="bg-dark-card hover:bg-dark-border border border-dark-border p-2 rounded disabled:opacity-50">
-                                        <i class="fas fa-chevron-left"></i>
-                                    </button>
-                                    <button onclick="app.render.watchEpisode('${animeId}', ${parseInt(episode) + 1})" 
-                                        class="bg-dark-card hover:bg-dark-border border border-dark-border p-2 rounded">
-                                        <i class="fas fa-chevron-right"></i>
-                                    </button>
-                                </div>
-                            </div>
-                        </div>
-                    `;
-                },
-
-                history() {
-                    const container = document.getElementById('app-container');
-                    const history = app.state.watchHistory;
-
-                    container.innerHTML = `
-                        <div class="space-y-6 fade-in">
-                            <h2 class="text-2xl font-bold">Watch History</h2>
-                            ${history.length === 0 
-                                ? `<div class="text-center text-gray-500 py-10">No history yet.</div>` 
-                                : `<div class="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-4">
-                                    ${history.map(item => `
-                                        <div class="group relative bg-dark-card rounded-lg overflow-hidden hover:shadow-lg hover:shadow-accent/20 transition-all cursor-pointer"
-                                             onclick="app.render.animeDetail('${item.id}')">
-                                            <div class="aspect-[2/3] overflow-hidden">
-                                                <img src="${item.image}" alt="${item.title}" 
-                                                     class="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
-                                                     loading="lazy">
-                                            </div>
-                                            <div class="p-3">
-                                                <h3 class="text-sm font-medium line-clamp-2 group-hover:text-accent transition-colors">${item.title}</h3>
-                                            </div>
-                                        </div>
-                                    `).join('')}
-                                  </div>`
-                            }
-                        </div>
-                    `;
-                }
+                router.navigate('home');
+                search.init();
             }
         };
 
-        // Initialize App
-        document.addEventListener('DOMContentLoaded', () => {
-            app.init();
-        });
+        // Helper Refs
+        app.ui = ui;
+        app.router = router;
+        app.home = home;
+        app.browse = browse;
+        app.watch = watch;
+        app.search = search;
+
+        // Start App
+        document.addEventListener('DOMContentLoaded', () => app.init());
+
     </script>
 </body>
 </html>
