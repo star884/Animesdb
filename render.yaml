@@ -1,0 +1,40 @@
+services:
+  - type: web
+    name: trianime
+    runtime: docker
+    dockerfilePath: ./Dockerfile
+    dockerfileBuildTarget: production
+    region: oregon  # Change as needed (us-west, us-east, etc)
+    plan: free  # Change to paid for always-on: standard, pro
+    port: 80
+    healthCheckPath: /
+    healthCheckInterval: 30
+    healthCheckTimeout: 10
+    autoDeploy: true
+    
+    envVars:
+      - key: PORT
+        value: 80
+      - key: APACHE_LOG_DIR
+        value: /var/log/apache2
+      - key: APACHE_LOCK_DIR
+        value: /var/run/apache2
+      - key: APACHE_PID_FILE
+        value: /var/run/apache2/apache2.pid
+      - key: APACHE_RUN_USER
+        value: www-data
+      - key: APACHE_RUN_GROUP
+        value: www-data
+
+    buildCommand: |
+      chmod +x build.sh && ./build.sh
+
+    startCommand: |
+      apache2-foreground
+
+    # Persistence (Optional - upgrade to paid tier)
+    # volumes:
+    #   - type: disk
+    #     name: apache-logs
+    #     mountPath: /var/log/apache2
+    #     sizeGB: 1
