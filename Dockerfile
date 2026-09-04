@@ -1,108 +1,47 @@
-# Multi-stage build for TRIANIME Anime Streaming Application
-# Stage 1: Builder - Setup dependencies
-FROM php:8.2-apache AS builder
+FROM php:8.2-apache
 
 WORKDIR /var/www/html
 
-# Install system dependencies
-RUN apt-get update && apt-get install -y --no-install-recommends \
-    git \
-    curl \
-    wget \
-    gnupg \
-    libssl-dev \
-    libcurl4-openssl-dev \
-    pkg-config \
-    ca-certificates \
+# Install only the runtime packages we actually need.
+RUN apt-get update \
+    && apt-get install -y --no-install-recommends \
+        curl \
+        ca-certificates \
     && rm -rf /var/lib/apt/lists/*
 
-# Enable Apache modules
-RUN a2enmod rewrite headers deflate expires ssl proxy proxy_http
+# Enable Apache modules used by the application.
+RUN a2enmod rewrite headers deflate expires
 
-# Copy PHP configuration
+# Copy PHP configuration.
 COPY php.ini /usr/local/etc/php/conf.d/custom.ini
 
-# Copy Apache configuration
+# Copy the Apache virtual host configuration.
 COPY apache-config.conf /etc/apache2/sites-available/000-default.conf
+
+# Enable the application site.
 RUN a2ensite 000-default
 
-# Copy application files
+# Copy the application entrypoint.
 COPY index.php /var/www/html/index.php
 
-# Set permissions
-RUN chown -R www-data:www-data /var/www/html && \
-    chmod -R 755 /var/www/html && \
-    chmod 644 /var/www/html/index.php
+# Make sure the web server can read the application.
+RUN chown -R www-data:www-data /var/www/html \
+    && find /var/www/html -type d -exec chmod 755 {} \; \
+    && find /var/www/html -type f -exec chmod 644 {} \;
 
-# Create necessary directories
-RUN mkdir -p /var/log/apache2 && \
-    chown -R www-data:www-data /var/log/apache2
-
-# ============================================================================
-# Production stage
-# ============================================================================
-FROM php:8.2-apache AS production
-
-WORKDIR /var/www/html
-
-# Install runtime dependencies only
-RUN apt-get update && apt-get install -y --no-install-recommends \
-    curl \
-    ca-certificates \
-    && rm -rf /var/lib/apt/lists/*
-
-# Enable Apache modules
-RUN a2enmod rewrite headers deflate expires ssl proxy proxy_http
-
-# Copy from builder
-COPY --from=builder /usr/local/etc/php/conf.d/custom.ini /usr/local/etc/php/conf.d/custom.ini
-COPY --from=builder /etc/apache2/sites-available/000-default.conf /etc/apache2/sites-available/000-default.conf
-COPY --from=builder /var/www/html /var/www/html
-COPY --from=builder /var/log/apache2 /var/log/apache2
-
-# Enable site
-RUN a2ensite 000-default
-
-# Set environment variables
-ENV APACHE_RUN_USER=www-data \
+# Render's default web-service port.
+ENV PORT=10000 \
+    APACHE_RUN_USER=www-data \
     APACHE_RUN_GROUP=www-data \
     APACHE_LOG_DIR=/var/log/apache2 \
     APACHE_LOCK_DIR=/var/run/apache2 \
     APACHE_PID_FILE=/var/run/apache2/apache2.pid
 
-# Expose ports
-EXPOSE 80 443
+EXPOSE 10000
 
-# Health check
+# Verify Apache can answer locally.
 HEALTHCHECK --interval=30s --timeout=10s --start-period=10s --retries=3 \
-    CMD curl -f http://localhost/ || exit 1
+    CMD curl -f http://127.0.0.1:10000/ || exit 1
 
-# Start Apache
-CMD ["apache2-foreground"]
-
-# ============================================================================
-# Development stage with debugging tools
-# ============================================================================
-FROM production AS development
-
-# Install development tools
-RUN apt-get update && apt-get install -y --no-install-recommends \
-    vim \
-    nano \
-    htop \
-    netcat-openbsd \
-    net-tools \
-    telnet \
-    dnsutils \
-    iputils-ping \
-    && rm -rf /var/lib/apt/lists/*
-
-# Enable debug logging
-RUN echo "error_reporting = E_ALL" >> /usr/local/etc/php/conf.d/custom.ini && \
-    echo "display_errors = On" >> /usr/local/etc/php/conf.d/custom.ini && \
-    echo "log_errors = On" >> /usr/local/etc/php/conf.d/custom.ini
-
-# More verbose logging
-ENV APACHE_LOG_LEVEL=debug
-
+# Render uses the Dockerfile CMD unless dockerCommand is explicitly set.
 CMD ["apache2-foreground"]
