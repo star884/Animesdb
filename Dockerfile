@@ -27,8 +27,7 @@ COPY apache-config.conf /etc/apache2/sites-available/000-default.conf
 RUN a2ensite 000-default
 
 # Copy application files
-COPY Index.php /var/www/html/Index.php
-COPY app.js /var/www/html/app.js
+COPY index.php /var/www/html/index.php
 
 # Set permissions
 RUN chown -R www-data:www-data /var/www/html && \
