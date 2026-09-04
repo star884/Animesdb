@@ -6,6 +6,8 @@
   <title>AniStream - Watch Free Anime</title>
   <link rel="stylesheet" href="style.css">
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;600;700&display=swap" rel="stylesheet">
+  <!-- HLS.js script for playing .m3u8 streams -->
+  <script src="https://cdn.jsdelivr.net/npm/hls.js@latest"></script>
 </head>
 <body>
 
@@ -22,7 +24,7 @@
   <header class="hero" id="heroBanner">
     <div class="hero-content">
       <h1 id="heroTitle">Loading Catalog...</h1>
-      <p id="heroDesc">Fetching the latest anime directly from API databases.</p>
+      <p id="heroDesc">Fetching anime metadata from API databases.</p>
       <button class="play-btn" id="heroPlayBtn">Watch Now</button>
     </div>
   </header>
@@ -54,7 +56,7 @@
         <label for="epSelect">Episode: </label>
         <select id="epSelect"></select>
         
-        <label for="serverSelect">Server / Quality: </label>
+        <label for="serverSelect">Quality / Server: </label>
         <select id="serverSelect"></select>
       </div>
     </div>
@@ -62,4 +64,4 @@
 
   <script src="app.js"></script>
 </body>
-  </html>
+</html>
