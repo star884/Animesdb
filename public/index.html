@@ -3,73 +3,140 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="theme-color" content="#020617">
+    <meta name="description" content="OSS View - Open Source Media Core">
     <title>OSS View - Open Source Media Core</title>
-    <script src="https://jsdelivr.net"></script>
-    <link rel="stylesheet" href="https://jsdelivr.net" />
+    <!-- Tailwind CSS -->
+    <script src="https://tailwindcss.com"></script>
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    animation: {
+                        "fade-in": "fadeIn 0.25s ease-out"
+                    },
+                    keyframes: {
+                        fadeIn: {
+                            from: { opacity: "0", transform: "translateY(5px)" },
+                            to: { opacity: "1", transform: "translateY(0)" }
+                        }
+                    }
+                }
+            }
+        };
+    </script>
 </head>
-<body class="bg-slate-950 text-slate-100 min-h-screen font-sans selection:bg-indigo-500">
+<body class="bg-slate-950 text-slate-100 min-h-screen font-sans selection:bg-indigo-500 selection:text-white">
 
-    <!-- Global Layout Navigation Header -->
-    <header class="border-b border-slate-900 bg-slate-900/60 backdrop-blur-md px-8 py-4 flex flex-col md:flex-row justify-between items-center gap-4 sticky top-0 z-50">
-        <div class="flex items-center gap-4">
-            <h1 class="text-2xl font-black tracking-tight text-indigo-500">OSS<span class="text-white font-normal text-base">View</span></h1>
-            <input id="tmdb-key" type="password" placeholder="Paste Free TMDB API Key Here..." class="px-3 py-1.5 bg-slate-800 border border-slate-700 rounded-lg text-xs focus:outline-none focus:border-indigo-500 w-48 font-mono">
+    <!-- ========================================================= HEADER ========================================================== -->
+    <header class="border-b border-slate-900 bg-slate-900/80 backdrop-blur-md px-4 sm:px-6 lg:px-8 py-4 flex flex-col lg:flex-row justify-between items-center gap-4 sticky top-0 z-50">
+        <!-- Logo / API key -->
+        <div class="flex items-center gap-4 w-full lg:w-auto">
+            <h1 class="text-2xl font-black tracking-tight text-indigo-500 whitespace-nowrap">
+                OSS<span class="text-white font-normal text-base">View</span>
+            </h1>
+            <input id="tmdb-key" type="password" autocomplete="off" placeholder="Paste TMDB API key..." class="px-3 py-2 bg-slate-800 border border-slate-700 rounded-lg text-xs focus:outline-none focus:border-indigo-500 w-full sm:w-64 font-mono">
         </div>
-        <div class="flex items-center gap-2 w-full md:w-5/12">
-            <input id="search-input" type="text" placeholder="Search catalog index database..." class="w-full px-4 py-2 bg-slate-800/80 border border-slate-700 rounded-lg focus:outline-none focus:border-indigo-500 text-sm">
-            <button id="search-btn" class="bg-indigo-600 hover:bg-indigo-700 px-5 py-2 rounded-lg text-sm transition font-semibold cursor-pointer">Search</button>
+
+        <!-- Search -->
+        <div class="flex items-center gap-2 w-full lg:w-5/12">
+            <input id="search-input" type="search" autocomplete="off" placeholder="Search movies and TV shows..." class="w-full px-4 py-2.5 bg-slate-800/80 border border-slate-700 rounded-lg focus:outline-none focus:border-indigo-500 text-sm">
+            <button id="search-btn" type="button" class="bg-indigo-600 hover:bg-indigo-700 active:bg-indigo-800 px-5 py-2.5 rounded-lg text-sm transition font-semibold cursor-pointer whitespace-nowrap disabled:opacity-50 disabled:cursor-not-allowed">
+                Search
+            </button>
         </div>
     </header>
 
-    <!-- Main Dynamic Application Workspace -->
-    <main class="max-w-7xl mx-auto p-6 space-y-10">
-        
-        <!-- Native Video Rendering Engine Display Viewport -->
+    <!-- ========================================================= MAIN ========================================================== -->
+    <main class="max-w-7xl mx-auto p-4 sm:p-6 space-y-8">
+        <!-- ===================================================== VIDEO PLAYER ====================================================== -->
         <section id="player-container" class="hidden bg-black aspect-video rounded-2xl overflow-hidden shadow-2xl border border-slate-900 transition-all duration-300">
-            <video id="player" playsinline controls class="w-full h-full">
-                <source src="" type="video/mp4" />
-            </video>
+            <!-- Dynamically populated with either an iframe embed or a video player by app.js -->
+            <div id="player-target" class="w-full h-full"></div>
         </section>
 
-        <!-- Dynamic Control Interface Overlay Panel -->
-        <section id="control-panel" class="hidden bg-slate-900 border border-slate-800 p-6 rounded-2xl grid grid-cols-1 md:grid-cols-3 gap-6 items-start animate-fade-in">
+        <!-- ===================================================== CONTROL PANEL ====================================================== -->
+        <section id="control-panel" class="hidden bg-slate-900 border border-slate-800 p-5 sm:p-6 rounded-2xl grid grid-cols-1 md:grid-cols-3 gap-6 items-start animate-fade-in">
+            <!-- Media information -->
             <div class="md:col-span-2 space-y-3">
-                <span class="bg-indigo-500/10 text-indigo-400 text-xs px-2.5 py-1 rounded-full font-bold uppercase tracking-wider">Now Reviewing</span>
-                <h2 id="active-title" class="text-3xl font-extrabold tracking-tight"></h2>
+                <span id="active-type" class="inline-block bg-indigo-500/10 text-indigo-400 text-xs px-2.5 py-1 rounded-full font-bold uppercase tracking-wider">
+                    Now Reviewing
+                </span>
+                <h2 id="active-title" class="text-2xl sm:text-3xl font-extrabold tracking-tight"></h2>
                 <p id="active-overview" class="text-slate-400 text-sm leading-relaxed"></p>
-                <div class="flex items-center gap-4 text-xs font-semibold text-slate-500 pt-2">
+                <div class="flex flex-wrap items-center gap-4 text-xs font-semibold text-slate-500 pt-2">
                     <span id="active-date"></span>
                     <span id="active-rating" class="text-amber-500"></span>
                 </div>
             </div>
+
+            <!-- ================================================= STREAMING OPTIONS ================================================== -->
             <div class="bg-slate-950 p-4 rounded-xl border border-slate-800 space-y-3 w-full">
-                <h3 class="text-xs font-bold text-slate-400 uppercase tracking-widest">Streaming Options</h3>
-                
-                <!-- Open Source Scraper Router -->
-                <button id="scrape-stream-btn" class="w-full bg-indigo-600 hover:bg-indigo-700 text-white py-2 rounded-lg text-xs font-bold transition shadow-md shadow-indigo-900/30 cursor-pointer">
-                    ⚡ Use Free Provider Embed Api
+                <h3 class="text-xs font-bold text-slate-400 uppercase tracking-widest">
+                    Streaming Options
+                </h3>
+                <button id="scrape-stream-btn" type="button" class="w-full bg-indigo-600 hover:bg-indigo-700 text-white py-2.5 rounded-lg text-xs font-bold transition shadow-md shadow-indigo-900/30 cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed">
+                    ⚡ Use Free Provider Embed API
                 </button>
-                <div class="text-center text-[10px] text-slate-600 font-bold my-1">OR ENTER SOURCE MAGNET LINK</div>
-                
-                <!-- Torrent Endpoint Ingestion Router -->
-                <input id="magnet-input" type="text" placeholder="magnet:?xt=urn:btih:..." class="w-full px-3 py-2 bg-slate-900 border border-slate-800 rounded-lg text-[11px] font-mono focus:outline-none focus:border-emerald-500">
-                <button id="torrent-stream-btn" class="w-full bg-emerald-600 hover:bg-emerald-700 text-white py-2 rounded-lg text-xs font-bold transition shadow-md shadow-emerald-900/30 cursor-pointer">
+                <div class="text-center text-[10px] text-slate-600 font-bold my-1">
+                    OR ENTER SOURCE MAGNET LINK
+                </div>
+                <input id="magnet-input" type="text" autocomplete="off" placeholder="magnet:?xt=urn:btih:..." class="w-full px-3 py-2.5 bg-slate-900 border border-slate-800 rounded-lg text-[11px] font-mono focus:outline-none focus:border-emerald-500">
+                <button id="torrent-stream-btn" type="button" class="w-full bg-emerald-600 hover:bg-emerald-700 text-white py-2.5 rounded-lg text-xs font-bold transition shadow-md shadow-emerald-900/30 cursor-pointer">
                     🚀 Run Local Torrent Engine
                 </button>
             </div>
-        </section>
 
-        <!-- Autopopulating Dashboard Showcase Grid -->
-        <section class="space-y-4">
-            <h3 id="section-heading" class="text-xl font-bold tracking-tight border-l-4 border-indigo-500 pl-3">Trending Media Content Showcase</h3>
-            <div id="media-library-grid" class="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 gap-5">
-                <!-- Javascript maps elements dynamically inside this grid wrapper -->
+            <!-- ================================================= SEASON / EPISODE SELECTOR ================================================== -->
+            <div id="episode-selector" class="hidden md:col-span-3 bg-slate-950 border border-slate-800 rounded-xl p-4">
+                <div class="flex flex-col sm:flex-row gap-4">
+                    <!-- Season -->
+                    <div class="flex-1">
+                        <label for="season-select" class="block text-[10px] font-bold uppercase tracking-widest text-slate-500 mb-2">
+                            Season
+                        </label>
+                        <select id="season-select" disabled class="w-full px-3 py-2.5 bg-slate-900 border border-slate-700 rounded-lg text-sm text-white focus:outline-none focus:border-indigo-500 disabled:opacity-50 disabled:cursor-not-allowed">
+                            <option value="">Select Season</option>
+                        </select>
+                    </div>
+                    <!-- Episode -->
+                    <div class="flex-1">
+                        <label for="episode-select" class="block text-[10px] font-bold uppercase tracking-widest text-slate-500 mb-2">
+                            Episode
+                        </label>
+                        <select id="episode-select" disabled class="w-full px-3 py-2.5 bg-slate-900 border border-slate-700 rounded-lg text-sm text-white focus:outline-none focus:border-indigo-500 disabled:opacity-50 disabled:cursor-not-allowed">
+                            <option value="">Select Episode</option>
+                        </select>
+                    </div>
+                </div>
+
+                <!-- Episode information -->
+                <div id="episode-info" class="hidden mt-4 p-4 rounded-lg bg-slate-900 border border-slate-800">
+                    <div class="flex flex-col sm:flex-row sm:justify-between gap-2">
+                        <h4 id="episode-title" class="font-bold text-sm"></h4>
+                        <span id="episode-date" class="text-xs text-slate-600"></span>
+                    </div>
+                    <p id="episode-overview" class="text-xs text-slate-500 mt-2 leading-relaxed"></p>
+                </div>
             </div>
         </section>
 
+        <!-- ===================================================== STATUS ====================================================== -->
+        <div id="status-message" class="hidden text-center p-4 bg-slate-900 border border-slate-800 rounded-xl text-sm text-slate-400 max-w-md mx-auto" role="status" aria-live="polite"></div>
+
+        <!-- ===================================================== MEDIA LIBRARY ====================================================== -->
+        <section class="space-y-4">
+            <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
+                <h3 id="section-heading" class="text-xl font-bold tracking-tight border-l-4 border-indigo-500 pl-3">
+                    Trending This Week
+                </h3>
+                <span id="result-count" class="text-xs text-slate-600"></span>
+            </div>
+            <div id="media-library-grid" class="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 gap-5"></div>
+        </section>
     </main>
 
-    <script src="https://jsdelivr.net"></script>
+    <!-- Application -->
     <script src="app.js"></script>
 </body>
 </html>
