@@ -1,0 +1,13 @@
+{
+  "name": "open-source-streamer",
+  "version": "1.1.0",
+  "description": "An open-source self-populating media library and streaming backend engine.",
+  "main": "server.js",
+  "scripts": {
+    "start": "node server.js"
+  },
+  "dependencies": {
+    "express": "^4.19.2",
+    "webtorrent": "^2.4.3"
+  }
+}
