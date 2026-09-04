@@ -1,37 +1,38 @@
+// server.js
 import express from 'express';
 import cors from 'cors';
 import axios from 'axios';
 import path from 'path';
 import { fileURLToPath } from 'url';
-import * as Consumet from '@consumet/extensions';
 import rateLimit from 'express-rate-limit';
 import NodeCache from 'node-cache';
+import { loadProviderFactories } from './providers/loader.js';
 
 const app = express();
 const PORT = process.env.PORT || 3000;
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 
-// Trust proxy so express-rate-limit and other middleware can rely on X-Forwarded-For when behind Render (or similar)
+// Trust proxy so express-rate-limit can rely on X-Forwarded-For (Render sets this header)
 app.set('trust proxy', 1);
 
 app.use(cors());
 app.use(express.json());
 app.use(express.static(path.join(__dirname, 'public')));
 
-// Light in-memory cache for playlists / other short-lived items
+// Light in-memory cache
 const cache = new NodeCache({ stdTTL: 120, checkperiod: 30 });
 
-// Light rate limiting for /api routes
+// Rate limiter for /api/
 const apiLimiter = rateLimit({
-  windowMs: 30 * 1000, // 30s window
-  max: 20, // limit each IP to 20 requests per windowMs
+  windowMs: 30 * 1000, // 30s
+  max: 20,
   standardHeaders: true,
   legacyHeaders: false
 });
 app.use('/api/', apiLimiter);
 
-// Helper: AniList GraphQL
+// AniList GraphQL helper
 const ANILIST_URL = 'https://graphql.anilist.co';
 async function fetchAniList(query, variables = {}) {
   try {
@@ -43,62 +44,46 @@ async function fetchAniList(query, variables = {}) {
   }
 }
 
-// Helper: is valid http(s) url
-function isHttpUrl(u) {
-  try {
-    const parsed = new URL(u);
-    return parsed.protocol === 'http:' || parsed.protocol === 'https:';
-  } catch (e) {
-    return false;
+// Load provider factories from providers/loader.js (local adapters + consumet)
+let providerFactories = [];
+try {
+  providerFactories = await loadProviderFactories();
+  if (!providerFactories?.length) {
+    console.warn('No provider factories loaded. Streaming endpoints will be unavailable until you add providers.');
+  } else {
+    console.log('Loaded provider factories:', providerFactories.map(f => `${f.name} (${f.source})`).join(', '));
   }
+} catch (err) {
+  console.error('Failed to load provider factories:', err?.message ?? err);
+  providerFactories = [];
 }
 
-// Provider fallback setup
-const ANIME = Consumet.ANIME ?? Consumet.default?.ANIME ?? null;
-const preferredProviders = ['Gogoanime','AnimePahe','Hianime','AnimeKai','AnimeSaturn','AnimeUnity','AnimeSama','KickAssAnime'];
-
-const providerFactories = [];
-if (ANIME) {
-  for (const name of preferredProviders) {
-    if (typeof ANIME[name] === 'function') providerFactories.push({ name, ctor: ANIME[name] });
-  }
-}
-
-if (!providerFactories.length) {
-  console.warn('No provider constructors found in @consumet/extensions. Streaming endpoints will be unavailable.');
-} else {
-  console.log('Provider constructors available:', providerFactories.map(p => p.name).join(', '));
-}
-
-// Lazy instantiate provider instances and cache them
+// Provider instance cache
 const providerInstances = new Map();
-function getProviderInstance(name, ctor) {
-  if (providerInstances.has(name)) return providerInstances.get(name);
-  try {
-    const inst = new ctor();
-    providerInstances.set(name, inst);
-    return inst;
-  } catch (err) {
-    console.warn(`Failed to instantiate provider ${name}:`, err?.message ?? err);
-    return null;
-  }
+function getProviderInstance(factory) {
+  const key = factory.name;
+  if (providerInstances.has(key)) return providerInstances.get(key);
+  const inst = factory.createInstance();
+  providerInstances.set(key, inst);
+  return inst;
 }
 
-// callWithFallback: tries methodName on each available provider in order.
-// options: { timeoutMs, retryPerProvider }
-// Returns { result, provider } on success or throws an Error with details on failure.
+// callWithFallback: try methodName across factories in order until success
 async function callWithFallback(methodName, args = [], options = {}) {
   const timeoutMs = options.timeoutMs ?? 15000;
   const retryPerProvider = options.retryPerProvider ?? 1;
   const errors = [];
 
-  for (const { name, ctor } of providerFactories) {
-    const inst = getProviderInstance(name, ctor);
-    if (!inst) {
-      errors.push({ provider: name, error: 'instantiate_failed' });
+  for (const factory of providerFactories) {
+    const name = factory.name;
+    let inst;
+    try {
+      inst = getProviderInstance(factory);
+    } catch (err) {
+      errors.push({ provider: name, error: `instantiate_failed: ${err?.message ?? err}` });
       continue;
     }
-    if (typeof inst[methodName] !== 'function') {
+    if (!inst || typeof inst[methodName] !== 'function') {
       errors.push({ provider: name, error: `method_missing:${methodName}` });
       continue;
     }
@@ -125,8 +110,12 @@ async function callWithFallback(methodName, args = [], options = {}) {
   throw e;
 }
 
-// RANGE-aware proxy for media (for segments, mp4, etc.)
-// Forwards Range header and pipes upstream response back to client (preserving status and headers when possible)
+// Helper: validate http(s) URLs
+function isHttpUrl(u) {
+  try { const parsed = new URL(u); return parsed.protocol === 'http:' || parsed.protocol === 'https:'; } catch (e) { return false; }
+}
+
+// RANGE-aware proxy for media segments and MP4 files
 app.get('/api/proxy', async (req, res) => {
   const url = req.query.url;
   if (!url || !isHttpUrl(url)) return res.status(400).send('Invalid url');
@@ -144,12 +133,11 @@ app.get('/api/proxy', async (req, res) => {
     upstream.data.pipe(res);
   } catch (err) {
     console.error('Proxy error streaming', url, err?.message ?? err);
-    // If upstream returned a non-2xx, axios throws; try to return a 502
     return res.status(502).send('Unable to proxy resource');
   }
 });
 
-// Playlist proxy (m3u8): fetch text, rewrite segment urls to /api/proxy, cache short TTL
+// Playlist proxy: fetch m3u8, rewrite segment URLs to point at /api/proxy and cache briefly
 app.get('/api/proxy/playlist', async (req, res) => {
   const url = req.query.url;
   if (!url || !isHttpUrl(url)) return res.status(400).send('Invalid url');
@@ -168,7 +156,7 @@ app.get('/api/proxy/playlist', async (req, res) => {
     const hostPrefix = `${req.protocol}://${req.get('host')}`;
 
     const lines = resp.data.split(/\r?\n/);
-    const rewritten = lines.map(line => {
+    const rewrittenLines = lines.map(line => {
       if (!line || line.startsWith('#')) return line;
       try {
         const resolved = new URL(line, base).toString();
@@ -176,8 +164,9 @@ app.get('/api/proxy/playlist', async (req, res) => {
       } catch (e) {
         return line;
       }
-    }).join('\n');
+    });
 
+    const rewritten = rewrittenLines.join('\n');
     cache.set(cacheKey, rewritten, 120); // 2 minutes
     res.setHeader('Content-Type', 'application/vnd.apple.mpegurl');
     res.setHeader('Access-Control-Allow-Origin', '*');
@@ -188,7 +177,7 @@ app.get('/api/proxy/playlist', async (req, res) => {
   }
 });
 
-// /api/catalog - AniList trending & popular
+// Catalog endpoint (AniList)
 app.get('/api/catalog', async (req, res) => {
   const query = `
     query {
@@ -222,7 +211,7 @@ app.get('/api/catalog', async (req, res) => {
   res.json(data || { trending: { media: [] }, popular: { media: [] }});
 });
 
-// /api/search?q=
+// Search (AniList)
 app.get('/api/search', async (req, res) => {
   const searchQuery = req.query.q;
   if (!searchQuery) return res.status(400).json({ error: 'Search query is required' });
@@ -247,7 +236,7 @@ app.get('/api/search', async (req, res) => {
   res.json(data?.Page?.media || []);
 });
 
-// /api/anime?animeId= -> uses providers' fetchAnimeInfo via fallback
+// /api/anime?animeId= -> uses providers via fallback
 app.get('/api/anime', async (req, res) => {
   const animeId = req.query.animeId;
   if (!animeId) return res.status(400).json({ error: 'animeId required' });
@@ -266,24 +255,24 @@ app.get('/api/anime', async (req, res) => {
 app.get('/api/stream', async (req, res) => {
   const { title, episode = 1, animeId } = req.query;
   const episodeNumber = Number.parseInt(episode, 10);
+
   if (!title && !animeId) return res.status(400).json({ error: 'title or animeId required' });
   if (!Number.isInteger(episodeNumber) || episodeNumber < 1) return res.status(400).json({ error: 'Episode must be a positive integer' });
   if (!providerFactories.length) return res.status(502).json({ error: 'No providers available' });
 
   try {
-    let animeInfo, usedProvider;
+    let animeInfo;
+    let usedProvider;
+
     if (animeId) {
-      const wrap = await callWithFallback('fetchAnimeInfo', [animeId], { timeoutMs: 15000, retryPerProvider: 1 });
-      animeInfo = wrap.result;
-      usedProvider = wrap.provider;
+      const infoWrap = await callWithFallback('fetchAnimeInfo', [animeId], { timeoutMs: 15000, retryPerProvider: 1 });
+      animeInfo = infoWrap.result;
+      usedProvider = infoWrap.provider;
     } else {
-      // search
       const searchWrap = await callWithFallback('search', [title], { timeoutMs: 12000, retryPerProvider: 1 });
       const searchResults = searchWrap.result;
       usedProvider = searchWrap.provider;
-      if (!searchResults?.results?.length) {
-        return res.status(404).json({ error: 'Anime not found', streams: [] });
-      }
+      if (!searchResults?.results?.length) return res.status(404).json({ error: 'Anime not found', streams: [] });
       const foundId = searchResults.results[0].id;
       const infoWrap = await callWithFallback('fetchAnimeInfo', [foundId], { timeoutMs: 15000, retryPerProvider: 1 });
       animeInfo = infoWrap.result;
@@ -294,7 +283,6 @@ app.get('/api/stream', async (req, res) => {
     const targetEp = episodes.find(ep => Number(ep.number) === episodeNumber) || episodes[0];
     if (!targetEp) return res.status(404).json({ error: 'Episode not found', streams: [] });
 
-    // fetch episode sources using fallback (we'll prefer provider used above but callWithFallback will try each)
     const srcWrap = await callWithFallback('fetchEpisodeSources', [targetEp.id], { timeoutMs: 15000, retryPerProvider: 1 });
     const sources = srcWrap.result;
     usedProvider = srcWrap.provider;
