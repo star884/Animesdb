@@ -3,7 +3,6 @@ import cors from 'cors';
 import axios from 'axios';
 import path from 'path';
 import { fileURLToPath } from 'url';
-// import { ANIME } from '@consumet/extensions';
 import * as Consumet from '@consumet/extensions';
 
 const app = express();
@@ -12,30 +11,51 @@ const PORT = process.env.PORT || 3000;
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 
-// Correct ESM initialization for @consumet/extensions
-// Try the common export shapes:
-// 1) named: { ANIME } where ANIME.Gogoanime is the constructor
-// 2) top-level class: { Gogoanime }
-// 3) default export containing ANIME: default.ANIME
+// Select ANIME exports from @consumet/extensions (handles default vs named exports)
 const ANIME = Consumet.ANIME ?? Consumet.default?.ANIME ?? null;
-const GogoConstructor =
-  Consumet.Gogoanime ??
-  ANIME?.Gogoanime ??
-  Consumet.default?.Gogoanime ??
-  null;
 
-if (typeof GogoConstructor !== 'function') {
+// Prefer Gogoanime if available, otherwise fall back to another provider that exists in ANIME
+const preferredProviders = [
+  'Gogoanime',
+  'Hianime',
+  'AnimePahe',
+  'AnimeKai',
+  'KickAssAnime',
+  'AnimeSaturn',
+  'AnimeUnity',
+  'AnimeSama'
+];
+
+let providerName = null;
+let gogoanime = null;
+
+if (ANIME) {
+  for (const name of preferredProviders) {
+    if (typeof ANIME[name] === 'function') {
+      providerName = name;
+      try {
+        gogoanime = new ANIME[name]();
+      } catch (err) {
+        console.error(`Failed to instantiate provider ${name}:`, err?.message ?? err);
+        gogoanime = null;
+      }
+      if (gogoanime) break;
+    }
+  }
+}
+
+if (!gogoanime) {
   console.error(
-    'Unable to find Gogoanime constructor in @consumet/extensions. Available top-level keys:',
+    'Unable to find or instantiate a supported anime provider in @consumet/extensions.\nAvailable top-level keys:',
     Object.keys(Consumet),
     'ANIME keys:',
     ANIME ? Object.keys(ANIME) : '(no ANIME)'
   );
-  // Exit so the deploy fails fast with a clear log
+  // Fail fast with a clear message so deploy logs show the problem
   process.exit(1);
 }
 
-const gogoanime = new GogoConstructor();
+console.log(`Using provider: ${providerName}`);
 
 app.use(cors());
 app.use(express.json());
