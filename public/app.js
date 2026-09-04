@@ -1,5 +1,6 @@
 let currentAnime = null;
 let currentStreams = [];
+let hlsInstance = null;
 
 document.addEventListener('DOMContentLoaded', () => {
   loadCatalog();
@@ -10,7 +11,6 @@ document.addEventListener('DOMContentLoaded', () => {
   document.getElementById('serverSelect').addEventListener('change', changeServer);
 });
 
-// Fetch automatically populated catalog from AniList API proxy
 async function loadCatalog() {
   const res = await fetch('/api/catalog');
   const data = await res.json();
@@ -62,7 +62,6 @@ function openStreamModal(anime) {
   document.getElementById('modalTitle').innerText = title;
   document.getElementById('videoModal').style.display = 'flex';
 
-  // Populate Episode Selector Dropdown
   const epCount = anime.episodes || 12;
   const epSelect = document.getElementById('epSelect');
   epSelect.innerHTML = Array.from({ length: epCount }, (_, i) => `<option value="${i + 1}">Episode ${i + 1}</option>`).join('');
@@ -88,9 +87,33 @@ async function loadStream() {
 function changeServer() {
   const serverIndex = document.getElementById('serverSelect').value;
   const player = document.getElementById('videoPlayer');
-  
-  if (currentStreams[serverIndex]) {
-    player.src = currentStreams[serverIndex].url;
+  const stream = currentStreams[serverIndex];
+
+  if (!stream) return;
+
+  // Destroy previous HLS instance if active
+  if (hlsInstance) {
+    hlsInstance.destroy();
+    hlsInstance = null;
+  }
+
+  // Use HLS.js if stream is .m3u8 and browser natively supports HLS.js
+  if (stream.isM3U8 || stream.url.includes('.m3u8')) {
+    if (Hls.isSupported()) {
+      hlsInstance = new Hls();
+      hlsInstance.loadSource(stream.url);
+      hlsInstance.attachMedia(player);
+      hlsInstance.on(Hls.Events.MANIFEST_PARSED, () => {
+        player.play();
+      });
+    } else if (player.canPlayType('application/vnd.apple.mpegurl')) {
+      // Native Safari HLS support
+      player.src = stream.url;
+      player.play();
+    }
+  } else {
+    // Standard MP4 video playback
+    player.src = stream.url;
     player.play();
   }
 }
@@ -99,5 +122,11 @@ function closeModal() {
   const player = document.getElementById('videoPlayer');
   player.pause();
   player.src = '';
+  
+  if (hlsInstance) {
+    hlsInstance.destroy();
+    hlsInstance = null;
+  }
+
   document.getElementById('videoModal').style.display = 'none';
-    }
+}
