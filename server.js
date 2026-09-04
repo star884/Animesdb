@@ -3,8 +3,10 @@ import cors from 'cors';
 import axios from 'axios';
 import path from 'path';
 import { fileURLToPath } from 'url';
-// Import Gogoanime directly from the anime subpath
-import { Gogoanime } from '@consumet/extensions';
+import consumet from '@consumet/extensions';
+
+// Handle CommonJS package export structure safely
+const ANIME = consumet.ANIME || consumet.default?.ANIME;
 
 const app = express();
 const PORT = process.env.PORT || 3000;
@@ -12,8 +14,8 @@ const PORT = process.env.PORT || 3000;
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 
-// Instantiate Gogoanime directly
-const gogoanime = new Gogoanime();
+// Initialize Gogoanime scraper instance
+const gogoanime = new ANIME.Gogoanime();
 
 app.use(cors());
 app.use(express.json());
@@ -79,7 +81,7 @@ app.get('/api/stream', async (req, res) => {
   const { title, episode = 1 } = req.query;
 
   if (!title) {
-    return res.status(400).json({ error: 'Title is required' });
+    return res.status(400).json({ error: 'Title parameter is required' });
   }
 
   try {
@@ -99,18 +101,19 @@ app.get('/api/stream', async (req, res) => {
         const streams = sources.sources.map((s) => ({
           quality: `${s.quality} (Live Stream)`,
           url: s.url,
-          isM3U8: s.isM3U8
+          isM3U8: s.isM3U8 || s.url.includes('.m3u8')
         }));
 
         return res.json({ title, episode: parseInt(episode, 10), streams });
       }
     }
 
-    // Fallback if scraping yields no matches
+    // Fallback stream source if no video is found
     const fallbackStreams = [
       {
         quality: '1080p (Fallback)',
-        url: 'https://commondatastorage.googleapis.com/gtv-videos-bucket/sample/BigBuckBunny.mp4'
+        url: 'https://commondatastorage.googleapis.com/gtv-videos-bucket/sample/BigBuckBunny.mp4',
+        isM3U8: false
       }
     ];
 
@@ -124,14 +127,15 @@ app.get('/api/stream', async (req, res) => {
       streams: [
         {
           quality: '1080p (Fallback)',
-          url: 'https://commondatastorage.googleapis.com/gtv-videos-bucket/sample/BigBuckBunny.mp4'
+          url: 'https://commondatastorage.googleapis.com/gtv-videos-bucket/sample/BigBuckBunny.mp4',
+          isM3U8: false
         }
       ]
     });
   }
 });
 
-// Bind server to Render's host requirement
+// Listen on 0.0.0.0 for Render edge router compatibility
 app.listen(PORT, '0.0.0.0', () => {
-  console.log(`Server listening on port ${PORT}`);
+  console.log(`Server running on port ${PORT}`);
 });
