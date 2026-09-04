@@ -1,9 +1,9 @@
 <?php
 /**
- * TRIANIME - Single File Anime Streaming Application
+ * TRIANIME - Tenrai Edition
  * 
- * @version 1.0.0
- * @description Fully responsive SPA using Consumet API, Tailwind CSS, and Vanilla JS.
+ * @version 2.0.0
+ * @description Fully responsive SPA using Tenrai API, Tailwind CSS, and Vanilla JS.
  */
 ?>
 <!DOCTYPE html>
@@ -115,776 +115,483 @@
                     <div class="ml-10 flex items-baseline space-x-4">
                         <button onclick="app.router.navigate('home')" class="nav-btn hover:text-accent px-3 py-2 rounded-md text-sm font-medium transition-colors" data-route="home">Home</button>
                         <button onclick="app.router.navigate('browse')" class="nav-btn hover:text-accent px-3 py-2 rounded-md text-sm font-medium transition-colors" data-route="browse">Browse</button>
-                        <button onclick="app.router.navigate('search')" class="nav-btn hover:text-accent px-3 py-2 rounded-md text-sm font-medium transition-colors" data-route="search">Search</button>
+                        <button onclick="app.router.navigate('history')" class="nav-btn hover:text-accent px-3 py-2 rounded-md text-sm font-medium transition-colors" data-route="history">History</button>
                     </div>
                 </div>
 
-                <!-- Mobile Menu Button -->
-                <div class="-mr-2 flex md:hidden">
-                    <button onclick="app.ui.toggleMobileMenu()" type="button" class="bg-dark-card inline-flex items-center justify-center p-2 rounded-md text-gray-400 hover:text-white hover:bg-gray-700 focus:outline-none">
-                        <i class="fas fa-bars"></i>
-                    </button>
+                <!-- Search & Mobile Menu -->
+                <div class="flex items-center gap-4">
+                    <!-- Search Bar -->
+                    <div class="hidden md:flex relative">
+                        <input type="text" id="search-input" placeholder="Search anime..." 
+                            class="bg-dark-card border border-dark-border rounded-full py-1.5 px-4 text-sm focus:outline-none focus:border-accent w-48 focus:w-64 transition-all duration-300">
+                        <button onclick="app.search.trigger()" class="absolute right-3 top-1.5 text-dark-text hover:text-accent">
+                            <i class="fas fa-search"></i>
+                        </button>
+                    </div>
+                    
+                    <!-- Mobile Menu Button -->
+                    <div class="md:hidden flex items-center">
+                        <button onclick="document.getElementById('mobile-menu').classList.toggle('hidden')" class="text-dark-text hover:text-accent">
+                            <i class="fas fa-bars"></i>
+                        </button>
+                    </div>
                 </div>
             </div>
         </div>
-
+        
         <!-- Mobile Menu -->
-        <div class="md:hidden hidden bg-dark-card border-t border-dark-border" id="mobile-menu">
+        <div id="mobile-menu" class="hidden md:hidden bg-dark-card border-b border-dark-border">
             <div class="px-2 pt-2 pb-3 space-y-1 sm:px-3">
-                <button onclick="app.router.navigate('home')" class="text-gray-300 hover:text-accent block px-3 py-2 rounded-md text-base font-medium w-full text-left">Home</button>
-                <button onclick="app.router.navigate('browse')" class="text-gray-300 hover:text-accent block px-3 py-2 rounded-md text-base font-medium w-full text-left">Browse</button>
-                <button onclick="app.router.navigate('search')" class="text-gray-300 hover:text-accent block px-3 py-2 rounded-md text-base font-medium w-full text-left">Search</button>
+                <button onclick="app.router.navigate('home')" class="block w-full text-left px-3 py-2 rounded-md text-base font-medium hover:bg-dark-bg hover:text-accent">Home</button>
+                <button onclick="app.router.navigate('browse')" class="block w-full text-left px-3 py-2 rounded-md text-base font-medium hover:bg-dark-bg hover:text-accent">Browse</button>
+                <button onclick="app.router.navigate('history')" class="block w-full text-left px-3 py-2 rounded-md text-base font-medium hover:bg-dark-bg hover:text-accent">History</button>
             </div>
         </div>
     </nav>
 
-    <!-- Main Content Area -->
-    <main class="flex-grow pt-16 relative">
-        
-        <!-- Loader Overlay -->
-        <div id="global-loader" class="hidden absolute inset-0 z-40 bg-dark-bg/80 flex items-center justify-center">
+    <!-- Main Content -->
+    <main id="app-container" class="flex-grow pt-20 pb-10 px-4 sm:px-6 lg:px-8 max-w-7xl mx-auto w-full">
+        <!-- Content injected via JS -->
+        <div class="flex justify-center items-center h-64">
             <div class="loader"></div>
         </div>
-
-        <!-- View: Home -->
-        <section id="view-home" class="view-section fade-in">
-            <!-- Hero Slider -->
-            <div id="hero-slider" class="relative h-[500px] md:h-[600px] w-full overflow-hidden group">
-                <div id="hero-content" class="absolute inset-0 transition-opacity duration-1000">
-                    <!-- Content injected via JS -->
-                </div>
-                <div class="absolute bottom-0 left-0 right-0 bg-gradient-to-t from-dark-bg via-dark-bg/80 to-transparent p-8 md:p-16">
-                    <div class="max-w-7xl mx-auto">
-                        <h1 id="hero-title" class="text-4xl md:text-6xl font-bold text-white mb-4 drop-shadow-lg">Loading...</h1>
-                        <p id="hero-synopsis" class="text-gray-300 max-w-2xl mb-6 line-clamp-3 drop-shadow-md"></p>
-                        <div class="flex space-x-4">
-                            <button id="hero-watch-btn" class="bg-accent text-black font-bold py-3 px-8 rounded-full hover:bg-white transition-all transform hover:scale-105 shadow-lg shadow-accent/20">
-                                <i class="fas fa-play mr-2"></i> Watch Now
-                            </button>
-                            <button id="hero-details-btn" class="bg-gray-800/80 backdrop-blur text-white font-bold py-3 px-8 rounded-full hover:bg-gray-700 transition-all border border-gray-600">
-                                <i class="fas fa-info-circle mr-2"></i> More Info
-                            </button>
-                        </div>
-                    </div>
-                </div>
-                
-                <!-- Slider Indicators -->
-                <div class="absolute bottom-4 right-8 flex space-x-2" id="hero-indicators"></div>
-            </div>
-
-            <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-12">
-                <div class="grid grid-cols-1 lg:grid-cols-3 gap-12">
-                    <!-- Main Grid: Latest Airing -->
-                    <div class="lg:col-span-2">
-                        <div class="flex justify-between items-center mb-6">
-                            <h2 class="text-2xl font-bold border-l-4 border-accent pl-3">Latest Airing</h2>
-                            <button onclick="app.router.navigate('browse', {filter: 'airing'})" class="text-sm text-accent hover:text-white transition-colors">View All <i class="fas fa-arrow-right ml-1"></i></button>
-                        </div>
-                        <div id="home-grid" class="grid grid-cols-2 md:grid-cols-3 gap-4">
-                            <!-- Cards injected here -->
-                        </div>
-                    </div>
-
-                    <!-- Sidebar: Upcoming & Genres -->
-                    <div class="space-y-8">
-                        <!-- Genres -->
-                        <div class="bg-dark-card p-4 rounded-xl border border-dark-border">
-                            <h3 class="font-bold mb-4 text-lg">Genres</h3>
-                            <div id="genre-tags" class="flex flex-wrap gap-2">
-                                <!-- Tags injected here -->
-                            </div>
-                        </div>
-
-                        <!-- Upcoming -->
-                        <div>
-                            <h2 class="text-2xl font-bold border-l-4 border-accent pl-3 mb-6">Upcoming</h2>
-                            <div id="upcoming-list" class="space-y-4">
-                                <!-- List items injected here -->
-                            </div>
-                        </div>
-                    </div>
-                </div>
-            </div>
-        </section>
-
-        <!-- View: Browse -->
-        <section id="view-browse" class="view-section hidden fade-in pt-8 pb-12">
-            <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-                <div class="flex flex-col md:flex-row gap-8">
-                    <!-- Filter Sidebar -->
-                    <aside class="w-full md:w-1/4 space-y-6">
-                        <div class="bg-dark-card p-5 rounded-xl border border-dark-border sticky top-24">
-                            <h3 class="font-bold text-lg mb-4">Filters</h3>
-                            
-                            <div class="mb-6">
-                                <label class="block text-sm font-medium text-gray-400 mb-2">Sort By</label>
-                                <select id="browse-sort" onchange="app.browse.updateFilters()" class="w-full bg-dark-bg border border-dark-border rounded-lg p-2 text-sm focus:ring-accent focus:border-accent outline-none">
-                                    <option value="popular">Most Popular</option>
-                                    <option value="top-airing">Top Airing</option>
-                                    <option value="top-upcoming">Top Upcoming</option>
-                                    <option value="movies">Movies</option>
-                                </select>
-                            </div>
-
-                            <div class="mb-6">
-                                <label class="block text-sm font-medium text-gray-400 mb-2">Genre</label>
-                                <div id="browse-genre-filters" class="space-y-2 max-h-60 overflow-y-auto custom-scrollbar">
-                                    <!-- Checkboxes injected here -->
-                                </div>
-                            </div>
-                            
-                            <button onclick="app.browse.resetFilters()" class="w-full py-2 border border-gray-600 rounded-lg hover:bg-gray-800 text-sm transition-colors">Reset Filters</button>
-                        </div>
-                    </aside>
-
-                    <!-- Grid -->
-                    <div class="w-full md:w-3/4">
-                        <div class="flex justify-between items-center mb-6">
-                            <h2 class="text-2xl font-bold" id="browse-title">Browse Library</h2>
-                            <span class="text-sm text-gray-500" id="browse-count"></span>
-                        </div>
-                        
-                        <div id="browse-grid" class="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-5">
-                            <!-- Grid content -->
-                        </div>
-
-                        <!-- Pagination -->
-                        <div class="mt-12 flex justify-center space-x-4" id="pagination">
-                            <button onclick="app.browse.changePage(-1)" id="btn-prev" class="px-6 py-2 border border-gray-700 rounded-lg hover:bg-gray-800 disabled:opacity-50">Prev</button>
-                            <button onclick="app.browse.changePage(1)" id="btn-next" class="px-6 py-2 border border-gray-700 rounded-lg hover:bg-gray-800 disabled:opacity-50">Next</button>
-                        </div>
-                    </div>
-                </div>
-            </div>
-        </section>
-
-        <!-- View: Watch -->
-        <section id="view-watch" class="view-section hidden fade-in pt-8">
-            <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-                <div class="grid grid-cols-1 lg:grid-cols-3 gap-8">
-                    <!-- Player & Details -->
-                    <div class="lg:col-span-2">
-                        <!-- Video Player -->
-                        <div class="relative w-full bg-black rounded-xl overflow-hidden shadow-2xl shadow-black/50 aspect-video mb-6 group">
-                            <iframe id="video-frame" class="w-full h-full" src="about:blank" frameborder="0" allowfullscreen></iframe>
-                        </div>
-
-                        <!-- Anime Info -->
-                        <div class="bg-dark-card p-6 rounded-xl border border-dark-border mb-6">
-                            <div class="flex justify-between items-start mb-4">
-                                <div>
-                                    <h1 id="watch-title" class="text-3xl font-bold text-white mb-2">Anime Title</h1>
-                                    <div class="flex items-center space-x-4 text-sm text-gray-400">
-                                        <span class="text-accent"><i class="fas fa-star mr-1"></i> <span id="watch-score">0.0</span></span>
-                                        <span><i class="fas fa-tv mr-1"></i> <span id="watch-status">Unknown</span></span>
-                                        <span><i class="fas fa-calendar mr-1"></i> <span id="watch-year">2024</span></span>
-                                    </div>
-                                </div>
-                                <button id="fav-btn" class="text-gray-400 hover:text-accent transition-colors text-2xl">
-                                    <i class="far fa-heart"></i>
-                                </button>
-                            </div>
-                            <p id="watch-synopsis" class="text-gray-300 leading-relaxed mb-4"></p>
-                            <div class="flex flex-wrap gap-2" id="watch-genres"></div>
-                        </div>
-                    </div>
-
-                    <!-- Episodes Sidebar -->
-                    <div class="lg:col-span-1">
-                        <div class="bg-dark-card rounded-xl border border-dark-border h-[600px] flex flex-col sticky top-24">
-                            <div class="p-4 border-b border-dark-border">
-                                <h3 class="font-bold text-lg">Episodes</h3>
-                                <div class="mt-2 flex gap-2">
-                                    <span id="ep-count" class="text-xs bg-gray-800 px-2 py-1 rounded text-gray-400">0 eps</span>
-                                    <select id="server-select" class="bg-gray-800 text-xs rounded px-2 py-1 border-none outline-none ml-auto">
-                                        <option value="vidstreaming">VidStreaming</option>
-                                        <option value="megacloud">MegaCloud</option>
-                                        <option value="streamsb">StreamSB</option>
-                                    </select>
-                                </div>
-                            </div>
-                            <div id="episode-list" class="flex-1 overflow-y-auto p-2 space-y-1 custom-scrollbar">
-                                <!-- Episode items -->
-                            </div>
-                        </div>
-                    </div>
-                </div>
-            </div>
-        </section>
-
-        <!-- View: Search -->
-        <section id="view-search" class="view-section hidden fade-in pt-8">
-            <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-                <div class="flex justify-center mb-8">
-                    <div class="relative w-full max-w-2xl">
-                        <input type="text" id="search-input" placeholder="Search anime, movies, characters..." 
-                            class="w-full bg-dark-card border border-dark-border rounded-full py-3 px-6 pl-12 focus:ring-2 focus:ring-accent focus:border-transparent outline-none transition-all shadow-lg">
-                        <i class="fas fa-search absolute left-4 top-3.5 text-gray-500"></i>
-                    </div>
-                </div>
-                
-                <div id="search-results" class="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-6">
-                    <!-- Results -->
-                </div>
-                <div id="search-loading" class="hidden text-center py-20">
-                    <div class="loader mx-auto mb-2"></div>
-                    <p class="text-gray-500">Searching...</p>
-                </div>
-                <div id="search-empty" class="hidden text-center py-20">
-                    <i class="fas fa-ghost text-4xl text-gray-700 mb-4"></i>
-                    <p class="text-gray-500">No anime found.</p>
-                </div>
-            </div>
-        </section>
-
     </main>
 
-    <!-- Footer -->
-    <footer class="bg-dark-card border-t border-dark-border py-8 mt-auto">
-        <div class="max-w-7xl mx-auto px-4 text-center">
-            <p class="text-gray-500 text-sm">&copy; 2024 TRIANIME. Data provided by Consumet API.</p>
-            <div class="flex justify-center space-x-4 mt-4">
-                <a href="#" class="text-gray-600 hover:text-accent"><i class="fab fa-discord"></i></a>
-                <a href="#" class="text-gray-600 hover:text-accent"><i class="fab fa-twitter"></i></a>
-                <a href="#" class="text-gray-600 hover:text-accent"><i class="fab fa-github"></i></a>
-            </div>
-        </div>
-    </footer>
-
-    <!-- Application Logic -->
+    <!-- JavaScript Application Logic -->
     <script>
         /**
-         * Configuration & Constants
+         * API Configuration
+         * Using the public Tenrai API endpoint (mguo.me)
          */
-        const CONFIG = {
-            apiBase: 'https://api.consumet.org', // Using Consumet for Anime data + streaming links
-            imageBase: 'https://jpg.dev', // Reliable image proxy
-            delayBetweenRequests: 400, // ms to prevent rate limiting
-        };
+        const API_BASE = 'https://api.mguo.me';
 
-        const GENRES = [
-            "Action", "Adventure", "Comedy", "Drama", "Fantasy", "Horror", "Mecha", 
-            "Music", "Mystery", "Psychological", "Romance", "Sci-Fi", "Slice of Life", 
-            "Sports", "Supernatural", "Thriller", "Isekai", "Josei", "Shonen", "Shojo"
-        ];
-
-        /**
-         * State Management
-         */
-        const state = {
-            currentRoute: 'home',
-            heroData: [],
-            heroIndex: 0,
-            browse: {
-                page: 1,
-                maxPage: 10,
-                filters: {
-                    type: 'popular',
-                    genres: [],
-                    search: ''
-                }
-            },
-            watch: {
-                animeId: null,
-                episodes: [],
-                currentEpisodeIndex: 0
-            },
-            search: {
-                timeout: null,
-                query: ''
-            },
-            timer: null
-        };
-
-        /**
-         * API Handler with Rate Limiting
-         */
         const api = {
-            async request(endpoint, params = {}) {
-                const url = new URL(`${CONFIG.apiBase}${endpoint}`);
+            async fetch(endpoint, params = {}) {
+                const url = new URL(`${API_BASE}${endpoint}`);
                 Object.keys(params).forEach(key => url.searchParams.append(key, params[key]));
                 
-                const res = await fetch(url.toString());
-                if (!res.ok) throw new Error(`API Error: ${res.status}`);
-                return await res.json();
-            },
-
-            async sequentialFetch(requests) {
-                const results = [];
-                for (let i = 0; i < requests.length; i++) {
-                    if (i < requests.length - 1) {
-                        await new Promise(r => setTimeout(r, CONFIG.delayBetweenRequests));
-                    }
-                    try {
-                        results.push(await requests[i]());
-                    } catch (err) {
-                        console.error(`Request ${i} failed`, err);
-                        results.push(null);
-                    }
+                try {
+                    const res = await fetch(url.toString());
+                    if (!res.ok) throw new Error(`API Error: ${res.status}`);
+                    return await res.json();
+                } catch (error) {
+                    console.error("API Fetch Failed:", error);
+                    return null;
                 }
-                return results;
             },
 
-            async getTrending() {
-                return this.request('/meta/anilist/trending?page=1');
+            async search(query, page = 1, size = 12) {
+                // Tenrai search endpoint
+                return await api.fetch('/search', { 
+                    query, 
+                    page, 
+                    perPage: size,
+                    type: 'all' 
+                });
+            },
+
+            async getAnimeDetails(id) {
+                // Tenrai returns details via search with ID or specific endpoint
+                // We use search with limit 1 and specific ID if available, or just search the ID
+                return await api.fetch('/search', { query: id, type: 'id' });
             },
             
-            async getTopAiring() {
-                return this.request('/meta/anilist/airing?page=1');
-            },
-
-            async getUpcoming() {
-                return this.request('/meta/anilist/advanced-search?type=anime&page=1&perPage=10&status=future');
-            },
-
-            async search(query, page = 1) {
-                return this.request(`/meta/anilist/search?query=${encodeURIComponent(query)}&page=${page}`);
-            },
-
-            async getAnimeInfo(id) {
-                return this.request(`/meta/anilist/info/${id}`);
-            },
-
-            async getEpisodeSources(animeId, episodeNumber, server = 'vidstreaming') {
-                // Consumet endpoint for episode sources
-                return this.request(`/meta/anilist/watch/${animeId}?episodeId=${episodeNumber}&server=${server}`);
+            // Helper to get watch page data
+            async getWatchPage(id, episodeId) {
+                // Tenrai provides video URLs directly in search/details, 
+                // but we can also use the embed URL for the player
+                return {
+                    id,
+                    episodeId,
+                    // Standard vidsrc embedding using Tenrai data structure
+                    embedUrl: `https://vidsrc.cc/embed/anime?id=${episodeId}&server=vidstream` 
+                };
             }
         };
 
-        /**
-         * UI Manager
-         */
-        const ui = {
-            toggleMobileMenu() {
-                const menu = document.getElementById('mobile-menu');
-                menu.classList.toggle('hidden');
+        const app = {
+            state: {
+                currentView: 'home',
+                searchResults: [],
+                watchHistory: JSON.parse(localStorage.getItem('trianime_history') || '[]'),
+                currentAnime: null
             },
 
-            showLoader(show) {
-                const loader = document.getElementById('global-loader');
-                if (show) loader.classList.remove('hidden');
-                else loader.classList.add('hidden');
+            init() {
+                this.router.init();
+                this.search.init();
+                this.render.home();
             },
 
-            getAnimeImageUrl(imgUrl) {
-                // Attempt to improve image quality or fallback
-                if(imgUrl && imgUrl.startsWith('http')) return imgUrl;
-                return 'https://via.placeholder.com/300x450?text=No+Image';
-            },
+            router: {
+                init() {
+                    window.addEventListener('hashchange', () => this.handleRoute());
+                    this.handleRoute();
+                },
 
-            createAnimeCard(anime) {
-                const imgSrc = this.getAnimeImageUrl(anime.image);
-                return `
-                    <div class="group relative bg-dark-card rounded-lg overflow-hidden shadow-lg hover:shadow-accent/20 transition-all duration-300 hover:-translate-y-1 cursor-pointer" onclick="app.router.navigate('watch', {id: '${anime.id}'})">
-                        <div class="aspect-[2/3] overflow-hidden">
-                            <img src="${imgSrc}" alt="${anime.title?.english || anime.title?.romaji || 'Anime'}" class="w-full h-full object-cover transform group-hover:scale-110 transition-transform duration-500">
-                            <div class="absolute inset-0 bg-gradient-to-t from-black/80 via-transparent to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300 flex items-end p-3">
-                                <span class="text-xs font-bold bg-accent text-black px-2 py-1 rounded-full">${anime.type || 'TV'}</span>
-                            </div>
-                        </div>
-                        <div class="p-3">
-                            <h3 class="text-sm font-semibold text-gray-100 truncate group-hover:text-accent transition-colors">${anime.title?.english || anime.title?.romaji || 'Unknown'}</h3>
-                            <div class="flex justify-between items-center mt-1">
-                                <span class="text-xs text-gray-500">${anime.releaseDate ? new Date(anime.releaseDate).getFullYear() : 'N/A'}</span>
-                                <span class="text-xs text-accent"><i class="fas fa-star mr-1"></i>${anime.rating ? (anime.rating / 10).toFixed(1) : '?'}</span>
-                            </div>
-                        </div>
-                    </div>
-                `;
-            },
+                navigate(route) {
+                    window.location.hash = route;
+                },
 
-            createEpisodeItem(ep, index) {
-                return `
-                    <div onclick="app.watch.selectEpisode(${index})" class="episode-item cursor-pointer p-3 rounded-lg hover:bg-gray-800 flex justify-between items-center group transition-colors border border-transparent hover:border-gray-700" data-index="${index}">
-                        <div class="flex items-center">
-                            <span class="text-xs font-mono text-gray-500 w-8">EP ${ep.number}</span>
-                            <span class="text-sm text-gray-300 truncate ml-2">${ep.title || `Episode ${ep.number}`}</span>
-                        </div>
-                        <i class="fas fa-play text-xs text-gray-600 group-hover:text-accent"></i>
-                    </div>
-                `;
-            }
-        };
-
-        /**
-         * Router
-         */
-        const router = {
-            navigate(view, params = {}) {
-                state.currentRoute = view;
-                
-                // Hide all views
-                document.querySelectorAll('.view-section').forEach(el => el.classList.add('hidden'));
-                
-                // Show target view
-                const target = document.getElementById(`view-${view}`);
-                if(target) {
-                    target.classList.remove('hidden');
-                    window.scrollTo(0, 0);
+                handleRoute() {
+                    const hash = window.location.hash.replace('#', '') || 'home';
+                    document.querySelectorAll('.nav-btn').forEach(btn => {
+                        btn.classList.remove('text-accent');
+                        if(btn.dataset.route === hash) btn.classList.add('text-accent');
+                    });
+                    app.render[hash]();
                 }
+            },
 
-                // Update Nav State
-                document.querySelectorAll('.nav-btn').forEach(btn => {
-                    if(btn.dataset.route === view) btn.classList.add('text-accent');
-                    else btn.classList.remove('text-accent');
-                });
+            search: {
+                init() {
+                    const input = document.getElementById('search-input');
+                    input.addEventListener('keypress', (e) => {
+                        if (e.key === 'Enter') this.trigger();
+                    });
+                },
 
-                // Trigger view logic
-                switch(view) {
-                    case 'home': app.home.init(); break;
-                    case 'browse': app.browse.init(params); break;
-                    case 'watch': app.watch.init(params); break;
-                    case 'search': 
-                        if(params.query) {
-                            document.getElementById('search-input').value = params.query;
-                            app.search.performSearch(params.query);
-                        }
-                        break;
+                async trigger() {
+                    const input = document.getElementById('search-input');
+                    const query = input.value.trim();
+                    if (!query) return;
+                    
+                    app.router.navigate('browse');
+                    await app.render.searchResults(query);
                 }
-            }
-        };
+            },
 
-        /**
-         * Feature: Home
-         */
-        const home = {
-            async init() {
-                app.ui.showLoader(true);
-                
-                // Fetch Data Sequentially
-                const [trendingRes, airingRes, upcomingRes] = await api.sequentialFetch([
-                    () => api.getTrending(),
-                    () => api.getTopAiring(),
-                    () => api.getUpcoming()
-                ]);
-
-                app.ui.showLoader(false);
-
-                // Handle Hero Slider
-                const heroData = trendingRes.results || [];
-                state.heroData = heroData;
-                state.heroIndex = 0;
-                home.renderHero();
-                home.startSlider();
-
-                // Render Grid
-                const grid = document.getElementById('home-grid');
-                if (airingRes && airingRes.results) {
-                    grid.innerHTML = airingRes.results.slice(0, 12).map(a => ui.createAnimeCard(a)).join('');
-                } else {
-                    grid.innerHTML = '<p class="col-span-3 text-center text-gray-500">Failed to load airing anime.</p>';
+            storage: {
+                addToHistory(anime) {
+                    const item = {
+                        id: anime.id,
+                        title: anime.title?.english || anime.title?.romaji || 'Unknown',
+                        image: anime.cover,
+                        episodes: anime.episodes || 0
+                    };
+                    
+                    // Remove if exists to update timestamp
+                    app.state.watchHistory = app.state.watchHistory.filter(a => a.id !== item.id);
+                    app.state.watchHistory.unshift(item);
+                    
+                    // Limit history
+                    if(app.state.watchHistory.length > 50) app.state.watchHistory.pop();
+                    
+                    localStorage.setItem('trianime_history', JSON.stringify(app.state.watchHistory));
                 }
+            },
 
-                // Render Upcoming
-                const upcomingList = document.getElementById('upcoming-list');
-                if (upcomingRes && upcomingRes.results) {
-                    upcomingList.innerHTML = upcomingRes.results.slice(0, 5).map(a => `
-                        <div class="flex items-center space-x-3 cursor-pointer hover:bg-gray-800 p-2 rounded transition-colors" onclick="app.router.navigate('watch', {id: '${a.id}'})">
-                            <img src="${ui.getAnimeImageUrl(a.image)}" class="w-12 h-16 object-cover rounded" loading="lazy">
+            render: {
+                home() {
+                    const container = document.getElementById('app-container');
+                    container.innerHTML = `
+                        <div class="space-y-8 fade-in">
+                            <!-- Trending Section -->
                             <div>
-                                <h4 class="text-sm font-semibold text-gray-200 line-clamp-1">${a.title?.english || a.title?.romaji}</h4>
-                                <span class="text-xs text-gray-500">Ep ${a.episodes?.next || '?'}</span>
+                                <h2 class="text-2xl font-bold mb-4 flex items-center gap-2">
+                                    <i class="fas fa-fire text-accent"></i> Trending Now
+                                </h2>
+                                <div id="trending-grid" class="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-4">
+                                    <!-- Loading State -->
+                                    <div class="animate-pulse bg-dark-card h-64 rounded-lg"></div>
+                                    <div class="animate-pulse bg-dark-card h-64 rounded-lg"></div>
+                                    <div class="animate-pulse bg-dark-card h-64 rounded-lg"></div>
+                                    <div class="animate-pulse bg-dark-card h-64 rounded-lg"></div>
+                                    <div class="animate-pulse bg-dark-card h-64 rounded-lg"></div>
+                                </div>
+                            </div>
+                        </div>
+                    `;
+                    this.loadTrending();
+                },
+
+                async loadTrending() {
+                    const grid = document.getElementById('trending-grid');
+                    const data = await api.search('', 1, 20); // Empty query often returns trending/all on Tenrai
+                    // Fallback to specific popular query if empty query fails or returns nothing
+                    let results = data?.results || [];
+                    if(results.length === 0) results = (await api.search('popular', 1, 20))?.results || [];
+
+                    grid.innerHTML = results.map(anime => `
+                        <div class="group relative bg-dark-card rounded-lg overflow-hidden hover:shadow-lg hover:shadow-accent/20 transition-all cursor-pointer"
+                             onclick="app.render.animeDetail('${anime.id}')">
+                            <div class="aspect-[2/3] overflow-hidden">
+                                <img src="${anime.cover}" alt="${anime.title?.english}" 
+                                     class="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
+                                     loading="lazy">
+                                <div class="absolute inset-0 bg-gradient-to-t from-dark-bg/90 to-transparent opacity-0 group-hover:opacity-100 transition-opacity flex items-end p-3">
+                                    <span class="text-xs font-bold text-accent">
+                                        <i class="fas fa-play-circle mr-1"></i> Watch Now
+                                    </span>
+                                </div>
+                                <div class="absolute top-2 right-2 bg-dark-bg/80 px-2 py-1 rounded text-xs font-bold text-accent">
+                                    ${anime.status || 'N/A'}
+                                </div>
+                            </div>
+                            <div class="p-3">
+                                <h3 class="text-sm font-medium line-clamp-2 group-hover:text-accent transition-colors">${anime.title?.english || anime.title?.romaji}</h3>
+                                <p class="text-xs text-gray-500 mt-1">${anime.type} • ${anime.releaseDate || ''}</p>
                             </div>
                         </div>
                     `).join('');
-                }
+                },
 
-                // Render Genres
-                const genreContainer = document.getElementById('genre-tags');
-                genreContainer.innerHTML = GENRES.map(g => `
-                    <button onclick="app.router.navigate('browse', {genre: '${g}'})" class="text-xs bg-dark-bg border border-gray-700 hover:border-accent hover:text-accent px-3 py-1 rounded-full transition-colors">${g}</button>
-                `).join('');
-            },
+                browse() {
+                    const container = document.getElementById('app-container');
+                    container.innerHTML = `
+                        <div class="space-y-6 fade-in">
+                            <h2 class="text-2xl font-bold">Browse All Anime</h2>
+                            <div id="browse-grid" class="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-4">
+                                <div class="animate-pulse bg-dark-card h-64 rounded-lg"></div>
+                                <div class="animate-pulse bg-dark-card h-64 rounded-lg"></div>
+                                <div class="animate-pulse bg-dark-card h-64 rounded-lg"></div>
+                            </div>
+                            <div id="load-more-container" class="flex justify-center mt-8 hidden">
+                                <button id="load-more-btn" class="bg-dark-card hover:bg-dark-border text-white px-6 py-2 rounded-full transition-colors">
+                                    Load More
+                                </button>
+                            </div>
+                        </div>
+                    `;
+                    this.loadBrowse();
+                },
 
-            renderHero() {
-                if (!state.heroData.length) return;
-                const anime = state.heroData[state.heroIndex];
-                
-                document.getElementById('hero-title').innerText = anime.title?.english || anime.title?.romaji;
-                document.getElementById('hero-synopsis').innerText = anime.description || 'No synopsis available.';
-                document.getElementById('hero-watch-btn').onclick = () => app.router.navigate('watch', {id: anime.id});
-                document.getElementById('hero-details-btn').onclick = () => app.router.navigate('watch', {id: anime.id});
-                
-                // Background image setup
-                const container = document.getElementById('hero-content');
-                container.style.backgroundImage = `linear-gradient(to right, rgba(10,10,10,0.9) 0%, rgba(10,10,10,0.4) 50%, rgba(10,10,10,0.1) 100%), url(${ui.getAnimeImageUrl(aname.image)})`;
-                container.style.backgroundSize = 'cover';
-                container.style.backgroundPosition = 'center';
-                
-                // Indicators
-                const indicators = document.getElementById('hero-indicators');
-                indicators.innerHTML = state.heroData.map((_, i) => `
-                    <button onclick="app.home.setHero(${i})" class="w-2 h-2 rounded-full ${i === state.heroIndex ? 'bg-accent' : 'bg-gray-600'}"></button>
-                `).join('');
-            },
-
-            setHero(index) {
-                state.heroIndex = index;
-                home.renderHero();
-                home.resetTimer();
-            },
-
-            startSlider() {
-                home.resetTimer();
-            },
-
-            resetTimer() {
-                if (state.timer) clearInterval(state.timer);
-                state.timer = setInterval(() => {
-                    state.heroIndex = (state.heroIndex + 1) % state.heroData.length;
-                    home.renderHero();
-                }, 6000);
-            }
-        };
-
-        /**
-         * Feature: Browse
-         */
-        const browse = {
-            async init(params = {}) {
-                const select = document.getElementById('browse-sort');
-                const genreContainer = document.getElementById('browse-genre-filters');
-                
-                // Reset or set filters from params
-                if(params.genre) {
-                    // Add genre to filter list
-                    if(!state.browse.filters.genres.includes(params.genre)) {
-                        state.browse.filters.genres.push(params.genre);
-                    }
-                }
-
-                // Render Genre Checkboxes
-                genreContainer.innerHTML = GENRES.map(g => `
-                    <label class="flex items-center space-x-2 cursor-pointer hover:text-accent">
-                        <input type="checkbox" value="${g}" 
-                            ${state.browse.filters.genres.includes(g) ? 'checked' : ''} 
-                            onchange="app.browse.toggleGenre('${g}')"
-                            class="form-checkbox h-4 w-4 text-accent rounded border-gray-600 bg-dark-bg focus:ring-offset-dark-bg">
-                        <span class="text-sm">${g}</span>
-                    </label>
-                `).join('');
-
-                // Initial Load
-                await this.fetchContent();
-            },
-
-            toggleGenre(genre) {
-                if(state.browse.filters.genres.includes(genre)) {
-                    state.browse.filters.genres = state.browse.filters.genres.filter(g => g !== genre);
-                } else {
-                    state.browse.filters.genres.push(genre);
-                }
-                state.browse.page = 1;
-                this.fetchContent();
-            },
-
-            updateFilters() {
-                const val = document.getElementById('browse-sort').value;
-                state.browse.filters.type = val;
-                state.browse.page = 1;
-                this.fetchContent();
-            },
-
-            resetFilters() {
-                state.browse.filters = { type: 'popular', genres: [], search: '' };
-                state.browse.page = 1;
-                document.getElementById('browse-sort').value = 'popular';
-                this.init();
-            },
-
-            changePage(offset) {
-                state.browse.page += offset;
-                this.fetchContent();
-            },
-
-            async fetchContent() {
-                app.ui.showLoader(true);
-                
-                let data = null;
-                let type = state.browse.filters.type;
-                let genres = state.browse.filters.genres;
-
-                try {
-                    if (type === 'movies') {
-                        data = await api.request('/meta/anilist/advanced-search?type=movie&page=1&perPage=20');
-                    } else if (type === 'top-airing') {
-                        data = await api.getTopAiring();
-                    } else if (type === 'top-upcoming') {
-                        data = await api.getUpcoming();
-                    } else {
-                        // Standard search with optional genres
-                        let query = '';
-                        if(genres.length > 0) query = genres.join(',');
-                        
-                        // Consumet advanced search handles genres better
-                        data = await api.request(`/meta/anilist/advanced-search?type=anime&page=${state.browse.page}&perPage=20${query ? `&genres=${query}` : ''}`);
-                    }
-                } catch (e) {
-                    console.error(e);
-                    data = { results: [] };
-                }
-
-                app.ui.showLoader(false);
-                
-                const grid = document.getElementById('browse-grid');
-                const count = document.getElementById('browse-count');
-                const items = data.results || [];
-
-                count.innerText = `${items.length} results`;
-                grid.innerHTML = items.length 
-                    ? items.map(a => ui.createAnimeCard(a)).join('') 
-                    : '<div class="col-span-4 text-center text-gray-500 py-10">No anime found matching criteria.</div>';
-
-                // Pagination Logic
-                document.getElementById('btn-prev').disabled = state.browse.page <= 1;
-                document.getElementById('btn-next').disabled = items.length < 20; // Simple heuristic
-            }
-        };
-
-        /**
-         * Feature: Watch
-         */
-        const watch = {
-            async init(params) {
-                if(!params.id) return;
-                
-                app.ui.showLoader(true);
-                state.watch.animeId = params.id;
-                
-                try {
-                    const data = await api.getAnimeInfo(params.id);
-                    this.renderPage(data);
-                } catch (e) {
-                    console.error(e);
-                    document.getElementById('watch-title').innerText = "Error loading anime";
-                }
-                app.ui.showLoader(false);
-            },
-
-            renderPage(data) {
-                // Basic Info
-                document.getElementById('watch-title').innerText = data.title?.english || data.title?.romaji;
-                document.getElementById('watch-synopsis').innerText = data.description || "No description available.";
-                document.getElementById('watch-score').innerText = data.rating ? (data.rating/10).toFixed(1) : 'N/A';
-                document.getElementById('watch-status').innerText = data.status;
-                document.getElementById('watch-year').innerText = data.releaseDate ? new Date(data.releaseDate).getFullYear() : 'N/A';
-                
-                const genres = data.genres || [];
-                document.getElementById('watch-genres').innerHTML = genres.map(g => 
-                    `<span class="text-xs bg-gray-800 px-2 py-1 rounded text-gray-400">${g}</span>`
-                ).join('');
-
-                // Episodes
-                const epList = document.getElementById('episode-list');
-                state.watch.episodes = data.episodes || [];
-                document.getElementById('ep-count').innerText = `${state.watch.episodes.length} Episodes`;
-                
-                epList.innerHTML = state.watch.episodes.map((ep, idx) => ui.createEpisodeItem(ep, idx)).join('');
-
-                // Select first episode
-                if(state.watch.episodes.length > 0) {
-                    this.selectEpisode(0);
-                } else {
-                    document.getElementById('video-frame').src = "about:blank";
-                }
-            },
-
-            async selectEpisode(index) {
-                // UI Update
-                document.querySelectorAll('.episode-item').forEach(el => {
-                    el.classList.remove('bg-gray-800', 'border-accent');
-                    if(parseInt(el.dataset.index) === index) el.classList.add('bg-gray-800', 'border-accent');
-                });
-                
-                state.watch.currentEpisodeIndex = index;
-                
-                // Get Source
-                const ep = state.watch.episodes[index];
-                const server = document.getElementById('server-select').value;
-                
-                try {
-                    const sourceData = await api.getEpisodeSources(state.watch.animeId, ep.number, server);
+                async loadBrowse(page = 1) {
+                    const grid = document.getElementById('browse-grid');
+                    const loadMoreBtn = document.getElementById('load-more-btn');
+                    const loadMoreContainer = document.getElementById('load-more-container');
                     
-                    // Consumet returns an object with `sources` array
-                    // Find high quality video
-                    const videoSource = sourceData.sources.find(s => s.quality === 'auto' || s.quality === '1080p' || s.quality === '720p') || sourceData.sources[0];
+                    // If not first page, clear grid
+                    if(page > 1) grid.innerHTML = '';
+
+                    const data = await api.search('', page, 20);
+                    const results = data?.results || [];
                     
-                    if(videoSource) {
-                        document.getElementById('video-frame').src = videoSource.url;
-                    } else {
-                        document.getElementById('video-frame').src = "about:blank";
+                    // Hide load more if no results
+                    if(results.length === 0) {
+                        loadMoreContainer.classList.add('hidden');
+                        return;
                     }
-                } catch(e) {
-                    console.error("Failed to load episode", e);
+                    
+                    loadMoreContainer.classList.remove('hidden');
+
+                    grid.insertAdjacentHTML('beforeend', results.map(anime => `
+                        <div class="group relative bg-dark-card rounded-lg overflow-hidden hover:shadow-lg hover:shadow-accent/20 transition-all cursor-pointer"
+                             onclick="app.render.animeDetail('${anime.id}')">
+                            <div class="aspect-[2/3] overflow-hidden">
+                                <img src="${anime.cover}" alt="${anime.title?.english}" 
+                                     class="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
+                                     loading="lazy">
+                                <div class="absolute top-2 right-2 bg-dark-bg/80 px-2 py-1 rounded text-xs font-bold text-accent">
+                                    ${anime.status || 'N/A'}
+                                </div>
+                            </div>
+                            <div class="p-3">
+                                <h3 class="text-sm font-medium line-clamp-2 group-hover:text-accent transition-colors">${anime.title?.english || anime.title?.romaji}</h3>
+                                <p class="text-xs text-gray-500 mt-1">${anime.type} • ${anime.releaseDate || ''}</p>
+                            </div>
+                        </div>
+                    `).join(''));
+
+                    // Setup load more
+                    if(loadMoreBtn) {
+                        loadMoreBtn.onclick = () => this.loadBrowse(page + 1);
+                    }
+                },
+
+                async searchResults(query) {
+                    const container = document.getElementById('app-container');
+                    container.innerHTML = `
+                        <div class="space-y-6 fade-in">
+                            <h2 class="text-2xl font-bold">Search: "${query}"</h2>
+                            <div id="search-grid" class="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-4">
+                                <div class="animate-pulse bg-dark-card h-64 rounded-lg"></div>
+                                <div class="animate-pulse bg-dark-card h-64 rounded-lg"></div>
+                            </div>
+                        </div>
+                    `;
+                    
+                    const data = await api.search(query, 1, 20);
+                    const results = data?.results || [];
+                    const grid = document.getElementById('search-grid');
+
+                    if(results.length === 0) {
+                        grid.innerHTML = `<div class="col-span-full text-center py-10 text-gray-500">No results found for "${query}"</div>`;
+                        return;
+                    }
+
+                    grid.innerHTML = results.map(anime => `
+                        <div class="group relative bg-dark-card rounded-lg overflow-hidden hover:shadow-lg hover:shadow-accent/20 transition-all cursor-pointer"
+                             onclick="app.render.animeDetail('${anime.id}')">
+                            <div class="aspect-[2/3] overflow-hidden">
+                                <img src="${anime.cover}" alt="${anime.title?.english}" 
+                                     class="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
+                                     loading="lazy">
+                                <div class="absolute top-2 right-2 bg-dark-bg/80 px-2 py-1 rounded text-xs font-bold text-accent">
+                                    ${anime.status || 'N/A'}
+                                </div>
+                            </div>
+                            <div class="p-3">
+                                <h3 class="text-sm font-medium line-clamp-2 group-hover:text-accent transition-colors">${anime.title?.english || anime.title?.romaji}</h3>
+                                <p class="text-xs text-gray-500 mt-1">${anime.type} • ${anime.releaseDate || ''}</p>
+                            </div>
+                        </div>
+                    `).join('');
+                },
+
+                async animeDetail(id) {
+                    const container = document.getElementById('app-container');
+                    
+                    // Show loading state
+                    container.innerHTML = `
+                        <div class="animate-pulse space-y-4">
+                            <div class="h-64 bg-dark-card rounded-lg w-full"></div>
+                            <div class="h-8 bg-dark-card rounded w-1/2"></div>
+                            <div class="h-32 bg-dark-card rounded w-full"></div>
+                        </div>
+                    `;
+
+                    const data = await api.search(id, 1, 1); // Fetch specific item
+                    const anime = data?.results[0];
+                    
+                    if(!anime) {
+                        container.innerHTML = `<div class="text-center py-20">Anime not found.</div>`;
+                        return;
+                    }
+
+                    app.storage.addToHistory(anime);
+                    app.state.currentAnime = anime;
+
+                    // Prepare episodes list
+                    const episodes = [];
+                    // Tenrai search results might contain episodes directly or just info. 
+                    // We assume the main result is the anime info.
+                    // If the API returns episodes inside the search result, use them.
+                    // Otherwise we assume we need to fetch watch page to get episodes or infer from ID.
+                    // For this implementation, we'll assume the API returns 'episodes' array or we use a standard range if missing.
+                    
+                    // Note: Tenrai /search often returns the anime info. 
+                    // We will generate episode buttons 1 to N if not provided, or use provided list.
+                    const totalEpisodes = anime.episodes || 12; 
+                    
+                    // Create episode list if not present in search result
+                    const episodeList = anime.episodes || Array.from({length: Math.min(totalEpisodes, 50)}, (_, i) => i + 1);
+
+                    container.innerHTML = `
+                        <div class="fade-in pb-10">
+                            <!-- Header -->
+                            <div class="flex flex-col md:flex-row gap-6 mb-8">
+                                <img src="${anime.cover}" alt="${anime.title?.english}" class="w-full md:w-64 rounded-lg shadow-lg shadow-black/50">
+                                <div class="flex-1">
+                                    <h1 class="text-3xl md:text-4xl font-bold mb-2">${anime.title?.english || anime.title?.romaji}</h1>
+                                    <div class="flex flex-wrap gap-2 mb-4">
+                                        <span class="bg-dark-card px-3 py-1 rounded-full text-xs border border-dark-border">${anime.type}</span>
+                                        <span class="bg-dark-card px-3 py-1 rounded-full text-xs border border-dark-border">${anime.status}</span>
+                                        ${anime.genres?.map(g => `<span class="text-accent text-xs">${g}</span>`).join('')}
+                                    </div>
+                                    <p class="text-gray-400 text-sm leading-relaxed mb-4">${anime.description || 'No description available.'}</p>
+                                    
+                                    <div class="flex gap-3">
+                                        <button onclick="app.render.watchEpisode('${anime.id}', 1)" class="bg-accent hover:bg-accent/80 text-black font-bold py-2 px-6 rounded-full transition-colors flex items-center gap-2">
+                                            <i class="fas fa-play"></i> Watch Now
+                                        </button>
+                                        <button onclick="window.history.back()" class="bg-dark-card hover:bg-dark-border border border-dark-border text-white py-2 px-6 rounded-full transition-colors">
+                                            <i class="fas fa-arrow-left"></i> Back
+                                        </button>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <!-- Episodes -->
+                            <h3 class="text-xl font-bold mb-4">Episodes</h3>
+                            <div class="grid grid-cols-4 sm:grid-cols-6 md:grid-cols-10 gap-2 mb-10">
+                                ${episodeList.map(ep => `
+                                    <button onclick="app.render.watchEpisode('${anime.id}', ${ep})" 
+                                            class="bg-dark-card hover:bg-dark-border border border-dark-border hover:border-accent text-center py-3 rounded transition-colors">
+                                        <span class="text-sm font-medium">${ep}</span>
+                                    </button>
+                                `).join('')}
+                            </div>
+                        </div>
+                    `;
+                },
+
+                async watchEpisode(animeId, episode) {
+                    const container = document.getElementById('app-container');
+                    
+                    // Find anime details again to get title
+                    const data = await api.search(animeId, 1, 1);
+                    const anime = data?.results[0];
+                    const title = anime?.title?.english || anime?.title?.romaji || 'Anime';
+
+                    container.innerHTML = `
+                        <div class="fade-in">
+                            <button onclick="window.location.hash='anime-${animeId}'" class="text-accent hover:underline mb-4 inline-block">
+                                <i class="fas fa-arrow-left"></i> Back to ${title}
+                            </button>
+                            
+                            <div class="relative w-full aspect-video bg-black rounded-lg overflow-hidden shadow-2xl shadow-black/50 mb-4">
+                                <iframe src="https://vidsrc.cc/embed/anime?id=${animeId}&ep=${episode}" 
+                                        frameborder="0" 
+                                        allowfullscreen
+                                        class="w-full h-full"
+                                        title="Video Player"></iframe>
+                            </div>
+                            
+                            <div class="flex justify-between items-center">
+                                <h2 class="text-2xl font-bold">${title} - Episode ${episode}</h2>
+                                <div class="flex gap-2">
+                                    <button onclick="app.render.watchEpisode('${animeId}', ${episode - 1})" 
+                                        ${episode === 1 ? 'disabled' : ''}
+                                        class="bg-dark-card hover:bg-dark-border border border-dark-border p-2 rounded disabled:opacity-50">
+                                        <i class="fas fa-chevron-left"></i>
+                                    </button>
+                                    <button onclick="app.render.watchEpisode('${animeId}', ${parseInt(episode) + 1})" 
+                                        class="bg-dark-card hover:bg-dark-border border border-dark-border p-2 rounded">
+                                        <i class="fas fa-chevron-right"></i>
+                                    </button>
+                                </div>
+                            </div>
+                        </div>
+                    `;
+                },
+
+                history() {
+                    const container = document.getElementById('app-container');
+                    const history = app.state.watchHistory;
+
+                    container.innerHTML = `
+                        <div class="space-y-6 fade-in">
+                            <h2 class="text-2xl font-bold">Watch History</h2>
+                            ${history.length === 0 
+                                ? `<div class="text-center text-gray-500 py-10">No history yet.</div>` 
+                                : `<div class="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-4">
+                                    ${history.map(item => `
+                                        <div class="group relative bg-dark-card rounded-lg overflow-hidden hover:shadow-lg hover:shadow-accent/20 transition-all cursor-pointer"
+                                             onclick="app.render.animeDetail('${item.id}')">
+                                            <div class="aspect-[2/3] overflow-hidden">
+                                                <img src="${item.image}" alt="${item.title}" 
+                                                     class="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
+                                                     loading="lazy">
+                                            </div>
+                                            <div class="p-3">
+                                                <h3 class="text-sm font-medium line-clamp-2 group-hover:text-accent transition-colors">${item.title}</h3>
+                                            </div>
+                                        </div>
+                                    `).join('')}
+                                  </div>`
+                            }
+                        </div>
+                    `;
                 }
             }
         };
 
-        /**
-         * Feature: Search
-         */
-        const search = {
-            init() {
-                const input = document.getElementById('search-input');
-                input.addEventListener('input', (e) => {
-                    clearTimeout(state.search.timeout);
-                    const query = e.target.value.trim();
-                    if(query.length > 2) {
-                        state.search.timeout = setTimeout(() => this.performSearch(query), 500);
-                    } else if (query.length === 0) {
-                        document.getElementById('search-results').innerHTML = '';
-                    }
-                });
-            },
-
-            async performSearch(query) {
-                if(!query) return;
-                state.search.query = query;
-                
-                app.ui.showLoader(true);
-                document.getElementById('search-loading').classList.remove('hidden');
-                document.getElementById('search-results').innerHTML = '';
-                document.getElementById('search-empty').classList.add('hidden');
-
-                try {
-                    const data = await api.search(query);
-                    app.ui.showLoader(false);
-                    document.getElementById('search-loading').classList.add('hidden');
-                    
-                    if(data.results && data.results.length > 0) {
-                        document.getElementById('search-results').innerHTML = data.results.map(a => ui.createAnimeCard(a)).join('');
-                    } else {
-                        document.getElementById('search-empty').classList.remove('hidden');
-                    }
-                } catch (e) {
-                    app.ui.showLoader(false);
-                    document.getElementById('search-loading').classList.add('hidden');
-                    console.error(e);
-                }
-            }
-        };
-
-        /**
-         * Initialization
-         */
-        const app = {
-            init() {
-                router.navigate('home');
-                search.init();
-            }
-        };
-
-        // Helper Refs
-        app.ui = ui;
-        app.router = router;
-        app.home = home;
-        app.browse = browse;
-        app.watch = watch;
-        app.search = search;
-
-        // Start App
-        document.addEventListener('DOMContentLoaded', () => app.init());
-
+        // Initialize App
+        document.addEventListener('DOMContentLoaded', () => {
+            app.init();
+        });
     </script>
 </body>
 </html>
