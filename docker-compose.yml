@@ -1,0 +1,31 @@
+version: '3.8'
+
+services:
+  trianime:
+    build:
+      context: .
+      dockerfile: Dockerfile
+      target: production
+    container_name: trianime-app
+    ports:
+      - "8080:80"
+    environment:
+      APACHE_LOG_DIR: /var/log/apache2
+      APACHE_LOCK_DIR: /var/run/apache2
+      APACHE_PID_FILE: /var/run/apache2/apache2.pid
+      APACHE_RUN_USER: www-data
+      APACHE_RUN_GROUP: www-data
+    volumes:
+      - ./Index.php:/var/www/html/Index.php:ro
+      - ./app.js:/var/www/html/app.js:ro
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost/"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 5s
+
+networks:
+  default:
+    name: trianime-network
