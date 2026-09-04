@@ -3,23 +3,23 @@ import cors from 'cors';
 import axios from 'axios';
 import path from 'path';
 import { fileURLToPath } from 'url';
-import { ANIME } from '@consumet/extensions'; // Import Consumet Scraper
+import { ANIME } from '@consumet/extensions';
 
 const app = express();
-// Bind dynamically to process.env.PORT provided by Render
+// Process environment port injection for Render deployment
 const PORT = process.env.PORT || 3000;
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 
-// Initialize Consumet Gogoanime provider instance
+// Initialize Consumet scraper instance
 const gogoanime = new ANIME.Gogoanime();
 
 app.use(cors());
 app.use(express.json());
 app.use(express.static(path.join(__dirname, 'public')));
 
-// 1. ANILIST GRAPHQL HELPER (Automated Catalog Population)
+// 1. ANILIST GRAPHQL HELPER
 const ANILIST_URL = 'https://graphql.anilist.co';
 
 async function fetchAniList(query, variables = {}) {
@@ -74,12 +74,12 @@ app.get('/api/search', async (req, res) => {
   res.json(data?.Page?.media || []);
 });
 
-// 4. ROUTE: Fetch Episode Video Streams
+// 4. ROUTE: Fetch Episode Video Streams (Scraper + Fallback)
 app.get('/api/stream', async (req, res) => {
   const { title, episode = 1 } = req.query;
 
   if (!title) {
-    return res.status(400).json({ error: 'Title is required' });
+    return res.status(400).json({ error: 'Title query parameter is required' });
   }
 
   try {
@@ -89,14 +89,14 @@ app.get('/api/stream', async (req, res) => {
     if (searchResults.results && searchResults.results.length > 0) {
       const animeId = searchResults.results[0].id;
       
-      // Fetch episode list
+      // Fetch full episode metadata list
       const animeInfo = await gogoanime.fetchAnimeInfo(animeId);
       const targetEp = animeInfo.episodes.find(
         (ep) => ep.number === parseInt(episode, 10)
       );
 
       if (targetEp) {
-        // Fetch raw direct streaming sources (.m3u8 / .mp4)
+        // Fetch direct video sources (.m3u8 / .mp4)
         const sources = await gogoanime.fetchEpisodeSources(targetEp.id);
         
         const streams = sources.sources.map((s) => ({
@@ -109,23 +109,23 @@ app.get('/api/stream', async (req, res) => {
       }
     }
 
-    // Fallback stream sources if scraping yields no matches
+    // Default Fallback Streams if search returns empty
     const fallbackStreams = [
       {
-        quality: '1080p (Fallback Test)',
+        quality: '1080p (Fallback Source)',
         url: 'https://commondatastorage.googleapis.com/gtv-videos-bucket/sample/BigBuckBunny.mp4'
       },
       {
-        quality: '720p (Fallback Test)',
+        quality: '720p (Backup Source)',
         url: 'https://commondatastorage.googleapis.com/gtv-videos-bucket/sample/ElephantsDream.mp4'
       }
     ];
 
     res.json({ title, episode: parseInt(episode, 10), streams: fallbackStreams });
   } catch (err) {
-    console.error('Scraper Error:', err.message);
+    console.error('Scraper Execution Error:', err.message);
 
-    // Serve default fallback streams on scraping errors
+    // Serve fallback stream if scraping encounters an error or anti-bot block
     res.json({
       title,
       episode: parseInt(episode, 10),
@@ -139,7 +139,7 @@ app.get('/api/stream', async (req, res) => {
   }
 });
 
-// Bind to host 0.0.0.0 so Render can properly route traffic externally
+// Bind to host 0.0.0.0 for Render edge routing compatibility
 app.listen(PORT, '0.0.0.0', () => {
-  console.log(`Server running on port ${PORT}`);
+  console.log(`Server listening on port ${PORT}`);
 });
