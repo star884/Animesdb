@@ -1,132 +1,196 @@
+// public/app.js
 let currentAnime = null;
 let currentStreams = [];
-let hlsInstance = null;
+let videoPlayer = null;
 
 document.addEventListener('DOMContentLoaded', () => {
   loadCatalog();
-
   document.getElementById('searchBtn').addEventListener('click', handleSearch);
   document.getElementById('closeModal').addEventListener('click', closeModal);
   document.getElementById('epSelect').addEventListener('change', loadStream);
   document.getElementById('serverSelect').addEventListener('change', changeServer);
+  document.addEventListener('keydown', (e) => {
+    if (e.key === 'Escape') closeModal();
+  });
 });
 
 async function loadCatalog() {
-  const res = await fetch('/api/catalog');
-  const data = await res.json();
-
-  if (data.trending?.media?.length > 0) {
-    setupHero(data.trending.media[0]);
-    renderGrid('trendingGrid', data.trending.media);
-  }
-
-  if (data.popular?.media?.length > 0) {
-    renderGrid('popularGrid', data.popular.media);
+  try {
+    const res = await fetch('/api/catalog');
+    const data = await res.json();
+    if (data.trending?.media?.length > 0) {
+      setupHero(data.trending.media[0]);
+      renderGrid('trendingGrid', data.trending.media);
+    }
+    if (data.popular?.media?.length > 0) {
+      renderGrid('popularGrid', data.popular.media);
+    }
+  } catch (e) {
+    console.error('Failed to load catalog', e);
   }
 }
 
 function setupHero(anime) {
-  const title = anime.title.english || anime.title.romaji;
+  const title = anime.title?.english || anime.title?.romaji || 'Unknown';
   document.getElementById('heroTitle').innerText = title;
-  document.getElementById('heroDesc').innerHTML = anime.description || 'No description available.';
-  document.getElementById('heroBanner').style.backgroundImage = `url(${anime.bannerImage || anime.coverImage.extraLarge})`;
-  
+  document.getElementById('heroDesc').innerHTML = anime.description ? anime.description.replace(/<\/?[^>]+(>|$)/g, "") : 'No description available.';
+  document.getElementById('heroBanner').style.backgroundImage = `url(${anime.bannerImage || anime.coverImage?.extraLarge || ''})`;
   document.getElementById('heroPlayBtn').onclick = () => openStreamModal(anime);
 }
 
 function renderGrid(elementId, items) {
   const grid = document.getElementById(elementId);
-  grid.innerHTML = items.map(item => `
-    <div class="card" onclick='openStreamModal(${JSON.stringify(item).replace(/'/g, "&apos;")})'>
-      <img src="${item.coverImage.extraLarge}" alt="${item.title.english || item.title.romaji}">
-      <div class="card-title">${item.title.english || item.title.romaji}</div>
-    </div>
-  `).join('');
+  grid.innerHTML = '';
+  items.forEach(item => {
+    const card = document.createElement('div');
+    card.className = 'card';
+    card.tabIndex = 0;
+    card.setAttribute('role', 'button');
+    card.dataset.title = item.title?.english || item.title?.romaji;
+    card.dataset.animeId = item.id;
+    card.innerHTML = `
+      <img loading="lazy" src="${item.coverImage?.extraLarge || ''}" alt="${item.title?.english || item.title?.romaji || 'Cover'}" />
+      <div class="card-title">${item.title?.english || item.title?.romaji}</div>
+    `;
+    card.addEventListener('click', () => openStreamModal(item));
+    card.addEventListener('keypress', (e) => { if (e.key === 'Enter') openStreamModal(item); });
+    grid.appendChild(card);
+  });
 }
 
 async function handleSearch() {
-  const query = document.getElementById('searchInput').value;
+  const query = document.getElementById('searchInput').value.trim();
   if (!query) return;
-
-  const res = await fetch(`/api/search?q=${encodeURIComponent(query)}`);
-  const results = await res.json();
-  
-  renderGrid('trendingGrid', results);
-  document.querySelector('.section h2').innerText = `Search Results for: "${query}"`;
+  try {
+    const res = await fetch(`/api/search?q=${encodeURIComponent(query)}`);
+    const results = await res.json();
+    document.getElementById('trendingTitle').innerText = `Search Results for: "${query}"`;
+    renderGrid('trendingGrid', results);
+  } catch (e) {
+    console.error('Search failed', e);
+  }
 }
 
-function openStreamModal(anime) {
+async function openStreamModal(anime) {
   currentAnime = anime;
-  const title = anime.title.english || anime.title.romaji;
-  
+  const title = anime.title?.english || anime.title?.romaji || 'Unknown';
   document.getElementById('modalTitle').innerText = title;
   document.getElementById('videoModal').style.display = 'flex';
+  document.getElementById('videoModal').setAttribute('aria-hidden', 'false');
 
-  const epCount = anime.episodes || 12;
+  // Populate episodes using server-side anime info when available
   const epSelect = document.getElementById('epSelect');
-  epSelect.innerHTML = Array.from({ length: epCount }, (_, i) => `<option value="${i + 1}">Episode ${i + 1}</option>`).join('');
+  epSelect.innerHTML = '';
+  const epCount = anime.episodes || 0;
+  if (anime.id) {
+    try {
+      const infoRes = await fetch(`/api/anime?animeId=${encodeURIComponent(anime.id)}`);
+      const info = await infoRes.json();
+      const eps = info?.episodes || [];
+      if (eps.length) {
+        eps.forEach(ep => {
+          const o = document.createElement('option');
+          o.value = ep.number;
+          o.textContent = `Episode ${ep.number}${ep.title ? ' - ' + ep.title : ''}`;
+          epSelect.appendChild(o);
+        });
+      } else if (epCount) {
+        for (let i = 1; i <= epCount; i++) {
+          const o = document.createElement('option');
+          o.value = i;
+          o.textContent = `Episode ${i}`;
+          epSelect.appendChild(o);
+        }
+      } else {
+        for (let i = 1; i <= 12; i++) {
+          const o = document.createElement('option');
+          o.value = i;
+          o.textContent = `Episode ${i}`;
+          epSelect.appendChild(o);
+        }
+      }
+    } catch (e) {
+      console.warn('Failed to load episodes from /api/anime', e);
+      for (let i = 1; i <= Math.max(12, epCount || 12); i++) {
+        const o = document.createElement('option');
+        o.value = i;
+        o.textContent = `Episode ${i}`;
+        epSelect.appendChild(o);
+      }
+    }
+  } else {
+    for (let i = 1; i <= (epCount || 12); i++) {
+      const o = document.createElement('option');
+      o.value = i;
+      o.textContent = `Episode ${i}`;
+      epSelect.appendChild(o);
+    }
+  }
+
+  // Initialize videojs player if needed
+  if (!videoPlayer) {
+    videoPlayer = videojs('videoPlayer', {
+      controls: true,
+      fluid: true,
+      autoplay: false
+    });
+  }
 
   loadStream();
 }
 
 async function loadStream() {
   const episode = document.getElementById('epSelect').value;
-  const title = currentAnime.title.english || currentAnime.title.romaji;
+  const animeId = currentAnime?.id;
+  const title = currentAnime?.title?.english || currentAnime?.title?.romaji || '';
 
-  const res = await fetch(`/api/stream?title=${encodeURIComponent(title)}&episode=${episode}`);
-  const data = await res.json();
+  try {
+    const query = animeId ? `/api/stream?animeId=${encodeURIComponent(animeId)}&episode=${episode}` : `/api/stream?title=${encodeURIComponent(title)}&episode=${episode}`;
+    const res = await fetch(query);
+    const data = await res.json();
+    currentStreams = data.streams || [];
 
-  currentStreams = data.streams || [];
-  
-  const serverSelect = document.getElementById('serverSelect');
-  serverSelect.innerHTML = currentStreams.map((s, index) => `<option value="${index}">${s.quality}</option>`).join('');
+    const serverSelect = document.getElementById('serverSelect');
+    serverSelect.innerHTML = '';
+    currentStreams.forEach((s, idx) => {
+      const o = document.createElement('option');
+      o.value = idx;
+      o.textContent = `${s.server || 'server'} — ${s.quality || 'auto'}`;
+      serverSelect.appendChild(o);
+    });
 
-  changeServer();
+    if (currentStreams.length) {
+      changeServer();
+    } else {
+      console.warn('No streams available', data);
+      alert('No streams available for this episode.');
+    }
+  } catch (e) {
+    console.error('Failed to load streams', e);
+    alert('Failed to load streams. Try again later.');
+  }
 }
 
 function changeServer() {
   const serverIndex = document.getElementById('serverSelect').value;
-  const player = document.getElementById('videoPlayer');
   const stream = currentStreams[serverIndex];
+  if (!stream || !videoPlayer) return;
 
-  if (!stream) return;
+  videoPlayer.pause();
 
-  // Destroy previous HLS instance if active
-  if (hlsInstance) {
-    hlsInstance.destroy();
-    hlsInstance = null;
-  }
-
-  // Use HLS.js if stream is .m3u8 and browser natively supports HLS.js
-  if (stream.isM3U8 || stream.url.includes('.m3u8')) {
-    if (Hls.isSupported()) {
-      hlsInstance = new Hls();
-      hlsInstance.loadSource(stream.url);
-      hlsInstance.attachMedia(player);
-      hlsInstance.on(Hls.Events.MANIFEST_PARSED, () => {
-        player.play();
-      });
-    } else if (player.canPlayType('application/vnd.apple.mpegurl')) {
-      // Native Safari HLS support
-      player.src = stream.url;
-      player.play();
-    }
+  if (stream.isM3U8 && stream.proxiedPlaylist) {
+    videoPlayer.src({ src: stream.proxiedPlaylist, type: 'application/x-mpegURL' });
   } else {
-    // Standard MP4 video playback
-    player.src = stream.url;
-    player.play();
+    videoPlayer.src({ src: stream.url, type: 'video/mp4' });
   }
+  videoPlayer.play().catch(() => {});
 }
 
 function closeModal() {
-  const player = document.getElementById('videoPlayer');
-  player.pause();
-  player.src = '';
-  
-  if (hlsInstance) {
-    hlsInstance.destroy();
-    hlsInstance = null;
-  }
-
   document.getElementById('videoModal').style.display = 'none';
-}
+  document.getElementById('videoModal').setAttribute('aria-hidden', 'true');
+  if (videoPlayer) {
+    videoPlayer.pause();
+    videoPlayer.src({ src: '', type: '' });
+  }
+    }
