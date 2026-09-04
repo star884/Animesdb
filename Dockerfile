@@ -32,8 +32,7 @@ COPY index.php /var/www/html/index.php
 # Set permissions
 RUN chown -R www-data:www-data /var/www/html && \
     chmod -R 755 /var/www/html && \
-    chmod 644 /var/www/html/Index.php && \
-    chmod 644 /var/www/html/app.js
+    chmod 644 /var/www/html/index.php
 
 # Create necessary directories
 RUN mkdir -p /var/log/apache2 && \
