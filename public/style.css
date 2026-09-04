@@ -23,7 +23,7 @@ body {
   justify-content: space-between;
   align-items: center;
   padding: 20px 50px;
-  background: rgba(11, 12, 16, 0.8);
+  background: rgba(11, 12, 16, 0.85);
   backdrop-filter: blur(10px);
   position: fixed;
   width: 100%;
@@ -46,6 +46,7 @@ body {
   border: none;
   background: #1f2833;
   color: #fff;
+  outline: none;
 }
 
 .search-box button {
@@ -147,7 +148,7 @@ body {
   text-overflow: ellipsis;
 }
 
-/* Modal */
+/* Modal Window */
 .modal {
   display: none;
   position: fixed;
@@ -195,4 +196,5 @@ select {
   background: var(--bg);
   color: var(--text);
   border: 1px solid var(--accent);
-    }
+  border-radius: 4px;
+  }
