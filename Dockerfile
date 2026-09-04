@@ -1,6 +1,6 @@
 # Multi-stage build for TRIANIME Anime Streaming Application
 # Stage 1: Builder - Setup dependencies
-FROM php:8.2-apache as builder
+FROM php:8.2-apache AS builder
 
 WORKDIR /var/www/html
 
@@ -40,8 +40,10 @@ RUN chown -R www-data:www-data /var/www/html && \
 RUN mkdir -p /var/log/apache2 && \
     chown -R www-data:www-data /var/log/apache2
 
+# ============================================================================
 # Production stage
-FROM php:8.2-apache as production
+# ============================================================================
+FROM php:8.2-apache AS production
 
 WORKDIR /var/www/html
 
@@ -80,10 +82,10 @@ HEALTHCHECK --interval=30s --timeout=10s --start-period=10s --retries=3 \
 # Start Apache
 CMD ["apache2-foreground"]
 
----
-
+# ============================================================================
 # Development stage with debugging tools
-FROM production as development
+# ============================================================================
+FROM production AS development
 
 # Install development tools
 RUN apt-get update && apt-get install -y --no-install-recommends \
