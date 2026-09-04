@@ -10,7 +10,7 @@ document.addEventListener('DOMContentLoaded', () => {
   document.getElementById('serverSelect').addEventListener('change', changeServer);
 });
 
-// Fetch catalog from automated server API
+// Fetch automatically populated catalog from AniList API proxy
 async function loadCatalog() {
   const res = await fetch('/api/catalog');
   const data = await res.json();
@@ -62,7 +62,7 @@ function openStreamModal(anime) {
   document.getElementById('modalTitle').innerText = title;
   document.getElementById('videoModal').style.display = 'flex';
 
-  // Populate Episode Select Options
+  // Populate Episode Selector Dropdown
   const epCount = anime.episodes || 12;
   const epSelect = document.getElementById('epSelect');
   epSelect.innerHTML = Array.from({ length: epCount }, (_, i) => `<option value="${i + 1}">Episode ${i + 1}</option>`).join('');
@@ -100,4 +100,4 @@ function closeModal() {
   player.pause();
   player.src = '';
   document.getElementById('videoModal').style.display = 'none';
-                   }
+    }
