@@ -3,12 +3,17 @@ import cors from 'cors';
 import axios from 'axios';
 import path from 'path';
 import { fileURLToPath } from 'url';
+import { ANIME } from '@consumet/extensions'; // Import Consumet Scraper
 
 const app = express();
+// Bind dynamically to process.env.PORT provided by Render
 const PORT = process.env.PORT || 3000;
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
+
+// Initialize Consumet Gogoanime provider instance
+const gogoanime = new ANIME.Gogoanime();
 
 app.use(cors());
 app.use(express.json());
@@ -70,32 +75,71 @@ app.get('/api/search', async (req, res) => {
 });
 
 // 4. ROUTE: Fetch Episode Video Streams
-// Integrated with open stream fallback + dynamic Consumet bridge interface
 app.get('/api/stream', async (req, res) => {
-  const { title, episode } = req.query;
+  const { title, episode = 1 } = req.query;
+
+  if (!title) {
+    return res.status(400).json({ error: 'Title is required' });
+  }
 
   try {
-    // You can point this to your self-hosted Consumet instance or open scraper API:
-    // const consumetRes = await axios.get(`http://localhost:3000/anime/gogoanime/${encodeURIComponent(title)}`);
-    
-    // Default fallback stream logic for standard video delivery test
-    const streams = [
+    // Search Gogoanime via Consumet for target title
+    const searchResults = await gogoanime.search(title);
+
+    if (searchResults.results && searchResults.results.length > 0) {
+      const animeId = searchResults.results[0].id;
+      
+      // Fetch episode list
+      const animeInfo = await gogoanime.fetchAnimeInfo(animeId);
+      const targetEp = animeInfo.episodes.find(
+        (ep) => ep.number === parseInt(episode, 10)
+      );
+
+      if (targetEp) {
+        // Fetch raw direct streaming sources (.m3u8 / .mp4)
+        const sources = await gogoanime.fetchEpisodeSources(targetEp.id);
+        
+        const streams = sources.sources.map((s) => ({
+          quality: `${s.quality} (Live Stream)`,
+          url: s.url,
+          isM3U8: s.isM3U8
+        }));
+
+        return res.json({ title, episode: parseInt(episode, 10), streams });
+      }
+    }
+
+    // Fallback stream sources if scraping yields no matches
+    const fallbackStreams = [
       {
-        quality: '1080p (Fast CDN)',
+        quality: '1080p (Fallback Test)',
         url: 'https://commondatastorage.googleapis.com/gtv-videos-bucket/sample/BigBuckBunny.mp4'
       },
       {
-        quality: '720p (Backup)',
+        quality: '720p (Fallback Test)',
         url: 'https://commondatastorage.googleapis.com/gtv-videos-bucket/sample/ElephantsDream.mp4'
       }
     ];
 
-    res.json({ title, episode: episode || 1, streams });
+    res.json({ title, episode: parseInt(episode, 10), streams: fallbackStreams });
   } catch (err) {
-    res.status(500).json({ error: 'Failed to fetch streaming links' });
+    console.error('Scraper Error:', err.message);
+
+    // Serve default fallback streams on scraping errors
+    res.json({
+      title,
+      episode: parseInt(episode, 10),
+      streams: [
+        {
+          quality: '1080p (Fallback)',
+          url: 'https://commondatastorage.googleapis.com/gtv-videos-bucket/sample/BigBuckBunny.mp4'
+        }
+      ]
+    });
   }
 });
 
-app.listen(PORT, () => {
-  console.log(`Server running at http://localhost:${PORT}`);
+// Bind to host 0.0.0.0 so Render can properly route traffic externally
+app.listen(PORT, '0.0.0.0', () => {
+  console.log(`Server running on port ${PORT}`);
 });
